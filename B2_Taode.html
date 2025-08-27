@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Tạo Đề Thi Theo Ma Trận</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+        :root {
+            --primary-color: #007bff; --secondary-color: #6c757d; --success-color: #28a745;
+            --danger-color: #dc3545; --info-color: #17a2b8; --warning-color: #ffc107;
+            --light-gray: #f8f9fa; --font-family: 'Roboto', sans-serif;
+        }
+        body { font-family: var(--font-family); background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
+        h1, h2, h3 { text-align: center; color: var(--primary-color); }
+        h2, h3 { color: #333; margin-top: 1.5em; margin-bottom: 1em;}
+        .app-view { display: none; }
+        .app-view.active { display: block; }
+        .upload-section { text-align: center; padding: 30px; border: 2px dashed #ccc; border-radius: 8px; background-color: #fafafa; }
+        .action-button { color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 500; transition: all 0.2s ease; }
+        .action-button:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .upload-button { background-color: var(--secondary-color); }
+        #fileInput { display: none; }
+        .summary-box { padding: 15px; background-color: #eef2fa; border-left: 5px solid var(--secondary-color); margin-bottom: 25px; border-radius: 5px; }
+        .matrix-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .matrix-table th, .matrix-table td { border: 1px solid #dee2e6; padding: 12px; text-align: center; }
+        .matrix-table th { background-color: var(--light-gray); }
+        .matrix-table .lesson-name { text-align: left; font-weight: 500; }
+        .matrix-table input[type="number"] { width: 60px; text-align: center; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
+        .matrix-table .available-count { font-size: 0.8em; color: #888; }
+        .generate-button { background-color: var(--success-color); display: block; width: 100%; margin-top: 20px; }
+        .review-question { background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .review-question .content { flex-grow: 1; white-space: pre-wrap; }
+        .review-question .actions { display: flex; align-items: center; gap: 15px; flex-shrink: 0; margin-left: 15px; }
+        .review-question .point-selector select { padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
+        .review-question .swap-button { background: none; border: 1px solid var(--primary-color); color: var(--primary-color); border-radius: 5px; padding: 5px 10px; cursor: pointer; }
+        .export-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: center; gap: 15px; }
+        .bulk-point-setter { margin-bottom: 20px; padding: 15px; background-color: var(--light-gray); border-radius: 8px; text-align: right; }
+        .bulk-point-setter input { width: 70px; margin: 0 10px; padding: 5px; }
+        .bulk-point-setter button { padding: 5px 10px; font-size: 0.9em; }
+        
+        /* Modal Styles */
+        .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-form-group { margin-bottom: 15px; }
+        .modal-form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .modal-form-group input { width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
+        .modal-footer { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Trình Tạo Đề Thi Theo Ma Trận</h1>
+        <div id="uploadView" class="app-view active">
+            <div class="upload-section">
+                <h3>Bước 1: Tải lên Ngân hàng câu hỏi</h3>
+                <p>Chọn một hoặc nhiều file JSON chứa câu hỏi của bạn.</p>
+                <input type="file" id="fileInput" accept=".json" multiple>
+                <button class="action-button upload-button" id="uploadButton">Chọn File JSON</button>
+            </div>
+        </div>
+        <div id="configView" class="app-view">
+            <h3>Bước 2: Xây dựng Ma trận Đề thi</h3>
+            <div id="configSummary" class="summary-box"></div>
+            <table class="matrix-table" id="matrixTable">
+                <thead><tr><th>Bài học</th><th>NB</th><th>TH</th><th>VD</th><th>VDC</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <button id="generateTestButton" class="action-button generate-button">Tạo Đề thi Ngẫu nhiên</button>
+        </div>
+        <div id="reviewView" class="app-view">
+            <h3>Bước 3: Rà soát và Xuất bản</h3>
+            <div class="bulk-point-setter">
+                <span>Điểm chung cho mỗi câu:</span>
+                <input type="number" id="bulk-points-input" step="0.25" value="0.25">
+                <button id="apply-bulk-points-btn" class="action-button" style="background-color: var(--secondary-color);">Áp dụng cho tất cả</button>
+            </div>
+            <div id="review-question-bank"></div>
+            <div class="export-section">
+                <button id="exportWordAzotaButton" class="action-button" style="background-color: var(--info-color);">Xuất Word (AZota)</button>
+                <button id="exportWordTestButton" class="action-button" style="background-color: var(--primary-color);">Xuất Word (Đề thi)</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="headerModal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header"><h3>Nhập thông tin tiêu đề</h3></div>
+            <div class="modal-form-group">
+                <label for="donVi">Đơn vị chủ quản</label>
+                <input type="text" id="donVi" value="UBND PHƯỜNG HẢI CHÂU">
+            </div>
+            <div class="modal-form-group">
+                <label for="tenTruong">Tên trường</label>
+                <input type="text" id="tenTruong" value="TRƯỜNG TRUNG HỌC CƠ SỞ LÊ THÁNH TÔN">
+            </div>
+             <div class="modal-form-group">
+                <label for="tenKyThi">Tên kỳ thi</label>
+                <input type="text" id="tenKyThi" value="KIỂM TRA CUỐI KÌ II NĂM HỌC 2024 - 2025">
+            </div>
+             <div class="modal-form-group">
+                <label for="monHoc">Môn học</label>
+                <input type="text" id="monHoc" value="Tin học 6">
+            </div>
+             <div class="modal-form-group">
+                <label for="thoiGian">Thời gian làm bài</label>
+                <input type="text" id="thoiGian" value="45 phút">
+            </div>
+            <div class="modal-footer">
+                <button id="cancelHeaderBtn" class="action-button" style="background-color: var(--secondary-color);">Huỷ</button>
+                <button id="confirmHeaderBtn" class="action-button" style="background-color: var(--success-color);">Xác Nhận & Xuất</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const TestGeneratorApp = {
+            state: {
+                allQuestions: [],
+                availableLessons: {},
+                testMatrix: {},
+                generatedTest: [],
+                view: 'upload',
+            },
+
+            init() {
+                this.dom = {
+                    views: { upload: document.getElementById('uploadView'), config: document.getElementById('configView'), review: document.getElementById('reviewView') },
+                    uploadButton: document.getElementById('uploadButton'),
+                    fileInput: document.getElementById('fileInput'),
+                    configSummary: document.getElementById('configSummary'),
+                    matrixTableBody: document.querySelector('#matrixTable tbody'),
+                    generateTestButton: document.getElementById('generateTestButton'),
+                    reviewQuestionBank: document.getElementById('review-question-bank'),
+                    exportAzotaBtn: document.getElementById('exportWordAzotaButton'),
+                    exportTestBtn: document.getElementById('exportWordTestButton'),
+                    headerModal: document.getElementById('headerModal'),
+                    cancelHeaderBtn: document.getElementById('cancelHeaderBtn'),
+                    confirmHeaderBtn: document.getElementById('confirmHeaderBtn'),
+                    bulkPointsInput: document.getElementById('bulk-points-input'),
+                    applyBulkPointsBtn: document.getElementById('apply-bulk-points-btn'),
+                };
+                
+                this.dom.uploadButton.addEventListener('click', () => this.dom.fileInput.click());
+                this.dom.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+                this.dom.generateTestButton.addEventListener('click', () => this.generateTest());
+                this.dom.exportAzotaBtn.addEventListener('click', () => this.exportTest('azota'));
+                this.dom.exportTestBtn.addEventListener('click', () => this.openHeaderModal());
+                this.dom.applyBulkPointsBtn.addEventListener('click', () => this.applyBulkPoints());
+                this.dom.cancelHeaderBtn.addEventListener('click', () => this.closeHeaderModal());
+                this.dom.confirmHeaderBtn.addEventListener('click', () => this.exportTest('test'));
+
+                this.dom.reviewQuestionBank.addEventListener('click', (event) => {
+                    if (event.target && event.target.classList.contains('swap-button')) {
+                        const uniqueId = event.target.dataset.id;
+                        this.swapQuestion(uniqueId);
+                    }
+                });
+                this.dom.reviewQuestionBank.addEventListener('change', (event) => {
+                    if (event.target && event.target.classList.contains('points-dropdown')) {
+                        const uniqueId = event.target.dataset.id;
+                        const newPoints = parseFloat(event.target.value);
+                        this.updatePoints(uniqueId, newPoints);
+                    }
+                });
+            },
+
+            openHeaderModal() {
+                 if (this.state.generatedTest.length === 0) return alert('Chưa có đề thi nào được tạo để xuất file.');
+                 this.dom.headerModal.style.display = 'flex';
+            },
+
+            closeHeaderModal() {
+                this.dom.headerModal.style.display = 'none';
+            },
+            
+            applyBulkPoints() {
+                const points = parseFloat(this.dom.bulkPointsInput.value);
+                if (isNaN(points) || points < 0) return alert('Vui lòng nhập một số điểm hợp lệ.');
+                this.state.generatedTest.forEach(q => q.points = points);
+                this.render();
+            },
+            
+            updatePoints(uniqueId, newPoints) {
+                const question = this.state.generatedTest.find(q => q.uniqueId == uniqueId);
+                if (question) question.points = newPoints;
+            },
+
+            handleFileSelect(event) {
+                const files = event.target.files;
+                if (files.length === 0) return;
+                
+                const fileReadPromises = Array.from(files).map(file => new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onload = e => { try { resolve(JSON.parse(e.target.result)); } catch { resolve(null); } };
+                    reader.readAsText(file);
+                }));
+
+                Promise.all(fileReadPromises).then(allData => {
+                    let tempBank = [];
+                    allData.forEach(data => {
+                        if (!data) return;
+                        const bai = data.thongTinChung?.tenBai || data.thongTinChung?.bai || 'Chung';
+                        const process = (qList) => qList.forEach(q => tempBank.push({ ...q, bai, uniqueId: Math.random() }));
+                        if (data.tracNghiem) process(data.tracNghiem);
+                        if (data.tuLuan) process(data.tuLuan);
+                    });
+                    
+                    const seenContent = new Set();
+                    this.state.allQuestions = tempBank.filter(q => {
+                        const content = (q.noiDung || '').trim();
+                        if (seenContent.has(content)) return false;
+                        seenContent.add(content);
+                        return true;
+                    });
+
+                    this.analyzeBank();
+                    this.state.view = 'config';
+                    this.render();
+                });
+            },
+
+            analyzeBank() {
+                this.state.availableLessons = {};
+                this.state.allQuestions.forEach(q => {
+                    if (!this.state.availableLessons[q.bai]) {
+                        this.state.availableLessons[q.bai] = { NB: 0, TH: 0, VD: 0, VDC: 0 };
+                    }
+                    if (this.state.availableLessons[q.bai][q.mucDo] !== undefined) {
+                        this.state.availableLessons[q.bai][q.mucDo]++;
+                    }
+                });
+            },
+
+            generateTest() {
+                this.state.testMatrix = {};
+                document.querySelectorAll('#matrixTable tbody tr').forEach(row => {
+                    const bai = row.dataset.bai;
+                    this.state.testMatrix[bai] = {
+                        NB: parseInt(row.querySelector('input[data-level="NB"]').value) || 0,
+                        TH: parseInt(row.querySelector('input[data-level="TH"]').value) || 0,
+                        VD: parseInt(row.querySelector('input[data-level="VD"]').value) || 0,
+                        VDC: parseInt(row.querySelector('input[data-level="VDC"]').value) || 0,
+                    };
+                });
+
+                this.state.generatedTest = [];
+                const shuffle = arr => arr.sort(() => 0.5 - Math.random());
+                for (const bai in this.state.testMatrix) {
+                    for (const level in this.state.testMatrix[bai]) {
+                        const count = this.state.testMatrix[bai][level];
+                        if (count > 0) {
+                            let pool = this.state.allQuestions.filter(q => q.bai === bai && q.mucDo === level);
+                            if (count > pool.length) return alert(`Lỗi: Yêu cầu ${count} câu ${level} từ "${bai}" nhưng chỉ có ${pool.length} câu.`);
+                            
+                            const byType = pool.reduce((acc, q) => { (acc[q.loai] = acc[q.loai] || []).push(q); return acc; }, {});
+                            let selected = [];
+                            const types = shuffle(Object.keys(byType));
+                            types.forEach(type => { if (selected.length < count && byType[type].length > 0) selected.push(byType[type].pop()); });
+                            
+                            let remainingPool = shuffle(Object.values(byType).flat());
+                            while (selected.length < count && remainingPool.length > 0) selected.push(remainingPool.pop());
+                            
+                            selected.forEach(q => q.points = 0.25);
+                            this.state.generatedTest.push(...selected);
+                        }
+                    }
+                }
+                this.state.view = 'review';
+                this.render();
+            },
+
+            swapQuestion(idToSwap) {
+                const indexToSwap = this.state.generatedTest.findIndex(q => q.uniqueId == idToSwap);
+                if (indexToSwap === -1) return;
+                const qToSwap = this.state.generatedTest[indexToSwap];
+                const testIds = new Set(this.state.generatedTest.map(q => q.uniqueId));
+                
+                const pool = this.state.allQuestions.filter(q => 
+                    q.bai === qToSwap.bai && 
+                    q.mucDo === qToSwap.mucDo && 
+                    !testIds.has(q.uniqueId)
+                );
+                if (pool.length > 0) {
+                    this.state.generatedTest[indexToSwap] = { ...pool[Math.floor(Math.random() * pool.length)], points: qToSwap.points };
+                    this.render();
+                } else {
+                    alert(`Không còn câu hỏi nào khác cùng bài "${qToSwap.bai}" và mức độ "${qToSwap.mucDo}" để đổi.`);
+                }
+            },
+            
+            exportTest(type) {
+                if (this.state.generatedTest.length === 0) return alert('Chưa có đề thi nào được tạo để xuất file.');
+                const generator = type === 'azota' ? this.generateWordAota : this.generateWordTest;
+                const { html, filename } = generator.call(this, this.state.generatedTest);
+                this.triggerDownload(html, filename);
+
+                if (type === 'test') {
+                    this.closeHeaderModal();
+                }
+            },
+
+            render() {
+                Object.values(this.dom.views).forEach(v => v.classList.remove('active'));
+                this.dom.views[this.state.view].classList.add('active');
+
+                if (this.state.view === 'config') {
+                    const total = Object.values(this.state.availableLessons).reduce((acc, levels) => {
+                        Object.keys(levels).forEach(level => acc[level] = (acc[level] || 0) + levels[level]);
+                        return acc;
+                    }, {NB:0, TH:0, VD:0, VDC:0});
+                    this.dom.configSummary.innerHTML = `<p><strong>Ngân hàng đề có:</strong> ${Object.keys(total).map(k => `${k}: ${total[k]}`).join(', ')}.</p>`;
+                    this.dom.matrixTableBody.innerHTML = Object.keys(this.state.availableLessons).map(bai => {
+                        const levels = this.state.availableLessons[bai];
+                        return `<tr data-bai="${bai}"><td class="lesson-name">${bai}</td>
+                            ${['NB', 'TH', 'VD', 'VDC'].map(l => `<td><input type="number" data-level="${l}" min="0" max="${levels[l]}" value="0"><div class="available-count">/ ${levels[l]}</div></td>`).join('')}
+                        </tr>`;
+                    }).join('');
+                } else if (this.state.view === 'review') {
+                    const pointsOptions = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+                    this.dom.reviewQuestionBank.innerHTML = this.state.generatedTest.map((q, index) => {
+                        const optionsHtml = pointsOptions.map(p => `<option value="${p}" ${p === q.points ? 'selected' : ''}>${p.toFixed(2)}</option>`).join('');
+                        
+                        return `<div class="review-question">
+                            <div class="content"><strong>Câu ${index + 1}:</strong> ${q.noiDung}</div>
+                            <div class="actions">
+                                <div class="point-selector">
+                                    <select class="points-dropdown" data-id="${q.uniqueId}">${optionsHtml}</select>
+                                </div>
+                                <button class="swap-button" data-id="${q.uniqueId}">🔄 Đổi câu</button>
+                            </div>
+                        </div>`;
+                    }).join('');
+                }
+            },
+            
+            generateWordAota(questions) {
+                let questionContent = questions.map((q, index) => {
+                    let questionHtml = `<p style="margin-top: 6pt; margin-bottom: 0;"><strong>Câu ${index + 1} (${(q.points || 0).toFixed(2)} điểm):</strong> ${q.noiDung}</p>`;
+                    if (q.luaChon && q.luaChon.length > 0) {
+                        const optionsHtml = q.luaChon.map((opt, i) => {
+                            const prefix = q.loai === 'multiple-answer' ? `${String.fromCharCode(97 + i)})` : `${String.fromCharCode(65 + i)}.`;
+                            return `<div style="margin-left: 20px;">${opt.correct ? '*' : ''}${prefix} ${opt.text}</div>`;
+                        }).join('');
+                        questionHtml += optionsHtml;
+                    }
+                    return questionHtml;
+                }).join('');
+
+                const answerKeyHtml = this.generateAnswerKeyHtml(questions, 'azota');
+                const fullHtml = `<div style="font-family: Times New Roman, serif; font-size: 13pt; line-height: 1.5; text-align: justify;">Phần 1. Trắc nghiệm${questionContent}${answerKeyHtml}</div>`;
+                return { html: fullHtml, filename: 'dapan_azota.doc' };
+            },
+            
+            generateWordTest(questions) {
+                const headerInfo = {
+                    donVi: document.getElementById('donVi').value,
+                    tenTruong: document.getElementById('tenTruong').value,
+                    tenKyThi: document.getElementById('tenKyThi').value,
+                    monHoc: document.getElementById('monHoc').value,
+                    thoiGian: document.getElementById('thoiGian').value
+                };
+
+                const headerHtml = `
+                    <table style="width:100%; border: none; font-family: 'Times New Roman', serif;">
+                        <tr>
+                            <td style="text-align: center; width: 50%; vertical-align: top; font-weight: bold;">
+                                <p style="margin:0; text-transform: uppercase;">${headerInfo.donVi}</p>
+                                <table style="margin: 0 auto; border: none; border-collapse: collapse; text-align: center;">
+                                    <tr><td style="padding:0; text-transform: uppercase;">${headerInfo.tenTruong}</td></tr>
+                                    <tr><td style="padding:0; border-top: 1px solid black; height: 1px;"></td></tr>
+                                </table>
+                            </td>
+                            <td style="text-align: center; width: 50%; vertical-align: top; font-weight: bold;">
+                                ${headerInfo.tenKyThi.toUpperCase()}<br>
+                                Môn: ${headerInfo.monHoc}<br>
+                                <span style="font-style: italic; font-weight: normal;">Thời gian làm bài: ${headerInfo.thoiGian} (không kể thời gian giao đề)</span>
+                            </td>
+                        </tr>
+                    </table>
+                    <p style="text-align: center; font-weight: bold; margin-top: 10pt;">ĐỀ CHÍNH THỨC</p>
+                    <table style="width: 100%; margin-top: 10pt;">
+                        <tr>
+                            <td style="width: 70%;"><strong>Họ và tên:</strong> .....................................................</td>
+                            <td><strong>Lớp:</strong> ......................</td>
+                        </tr>
+                    </table>`;
+
+                const totalPoints = questions.reduce((sum, q) => sum + (q.points || 0), 0);
+                let tracNghiemCount = questions.filter(q => q.loai !== 'situation').length;
+                let answerGridHtml = `<p style="text-align: left; font-style: italic; margin-top: 6pt; margin-bottom: 0;">- Em hãy điền đáp án vào khung bên dưới cho câu trả lời đúng: (mỗi câu đúng ${(totalPoints/tracNghiemCount).toFixed(2)} điểm)</p>
+                                      <table style="width:100%; border-collapse: collapse; margin: 10pt 0;">`;
+                const cols = 12;
+                const rows = Math.ceil(tracNghiemCount / cols);
+                for (let i = 0; i < rows; i++) {
+                    answerGridHtml += '<tr>';
+                    for(let j=0; j<cols; j++) { const num = i * cols + j + 1; if(num <= tracNghiemCount) answerGridHtml += `<td style="border: 1px solid black; text-align: center; font-weight: bold; padding: 4px;">Câu ${num}</td>`; }
+                    answerGridHtml += '</tr><tr>';
+                    for(let j=0; j<cols; j++) { const num = i * cols + j + 1; if(num <= tracNghiemCount) answerGridHtml += `<td style="border: 1px solid black; height: 20px;"></td>`; }
+                    answerGridHtml += '</tr>';
+                }
+                answerGridHtml += '</table>';
+
+                let questionContent = questions.map((q, index) => {
+                    let questionHtml = `<p style="margin-top: 6pt; margin-bottom: 0;"><strong>Câu ${index + 1} (${(q.points || 0).toFixed(2)} điểm):</strong> ${q.noiDung}</p>`;
+                    if (q.luaChon && q.luaChon.length > 0) {
+                         const optionsHtml = q.luaChon.map((opt, i) => {
+                            const checkbox = `<span style="display: inline-block; width: 35px; text-align: center; border: 1px solid #000; margin-right: 8px; vertical-align: -5px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>`;
+                            const prefix = q.loai === 'multiple-answer' ? checkbox : `${String.fromCharCode(65 + i)}.`;
+                            return `<div style="margin-left: 20px;">${prefix} ${opt.text}</div>`;
+                        }).join('');
+                        questionHtml += optionsHtml;
+                    }
+                    return questionHtml;
+                }).join('');
+                
+                const answerKeyHtml = this.generateAnswerKeyHtml(questions, 'test');
+                const finalHtml = `<div style="font-family: Times New Roman, serif; font-size: 13pt; line-height: 1.5; margin: 0 auto; max-width: 800px; text-align: justify;">
+                    ${headerHtml}
+                    <h3 style="text-align:left; font-weight:bold;">Phần 1. Trắc nghiệm (${totalPoints.toFixed(2)} điểm)</h3>
+                    ${answerGridHtml}
+                    ${questionContent}
+                    <br/><p style="text-align: center;">---HẾT---</p></div>${answerKeyHtml}`;
+                return { html: finalHtml, filename: 'de_thi.doc' };
+            },
+            
+            generateAnswerKeyHtml(questions, type) {
+                let keyHtml = `<div style="font-family: Times New Roman, serif; font-size: 14pt; margin: 0 auto; max-width: 800px; page-break-before: always;"><h1 style="text-align: center;">${type === 'azota' ? 'ANSWER KEYS' : 'Bảng đáp án'}</h1></div>
+                               <div style="font-family: Times New Roman, serif; font-size: 12pt; margin: 0 auto; max-width: 800px;">`;
+                let answers = ``;
+                questions.forEach((q, index) => {
+                    const num = index + 1;
+                    if (q.loai === 'multiple-choice') {
+                        const correctIndex = (q.luaChon || []).findIndex(opt => opt.correct);
+                        if (correctIndex !== -1) answers += `<p>${num}. ${String.fromCharCode(65 + correctIndex)}</p>`;
+                    } else if (q.loai === 'multiple-answer') {
+                        let line = `<p><strong>Câu ${num}:</strong> `;
+                        (q.luaChon || []).forEach((opt, i) => {
+                            const label = String.fromCharCode(97 + i);
+                            line += `${label})${opt.correct ? 'Đ' : 'S'} `;
+                        });
+                        answers += line.trim() + '</p>';
+                    } else if (q.loai === 'fill-blank' && q.dapAn) {
+                        answers += `<p>${num}. ${q.dapAn}</p>`;
+                    }
+                });
+                return keyHtml + answers + '</div>';
+            },
+
+            triggerDownload(htmlContent, filename) {
+                const fullHtml = `<!DOCTYPE html><html><head><meta charset='utf-8'></head><body>${htmlContent}</body></html>`;
+                const blob = new Blob([fullHtml], { type: 'application/msword' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = filename;
+                document.body.appendChild(a); a.click();
+                setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 0);
+            }
+        };
+
+        TestGeneratorApp.init();
+    </script>
+</body>
+</html>

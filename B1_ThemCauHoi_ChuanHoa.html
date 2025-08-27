@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo Bài Tập Theo Định Dạng</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; }
+        .header h1 { font-size: 2.2em; margin-bottom: 10px; font-weight: 600; }
+        .header p { font-size: 1.1em; opacity: 0.9; }
+        .form-container { padding: 40px; }
+        .section { margin-bottom: 40px; border: 2px solid #e8f4fd; border-radius: 12px; padding: 25px; background: #fafcff; }
+        .section-title { font-size: 1.4em; color: #2c5aa0; margin-bottom: 20px; font-weight: 600; display: flex; align-items: center; }
+        .section-title::before { content: "📋"; margin-right: 10px; font-size: 1.2em; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #333; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 15px; border: 2px solid #e1e8ed; border-radius: 8px; font-size: 14px; transition: all 0.3s ease; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #4facfe; box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.1); }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+        .question-container { border: 2px solid #e8f0fe; border-radius: 10px; padding: 20px; margin-bottom: 25px; background: white; }
+        .question-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .question-title { font-weight: 600; color: #1a73e8; font-size: 1.1em; }
+        .remove-question { background: #ff4757; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; transition: background 0.3s ease; }
+        .remove-question:hover { background: #ff3742; }
+        .options-container { margin-top: 15px; }
+        .option-group { display: flex; align-items: center; margin-bottom: 10px; gap: 10px; }
+        .option-group input[type="text"] { flex: 1; }
+        .option-group input[type="checkbox"] { width: auto; flex-shrink: 0; width: 18px; height: 18px; }
+        .add-button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: transform 0.2s ease; margin-right: 10px; }
+        .add-button:hover { transform: translateY(-2px); }
+        .button-group { margin-top: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .generate-button, .json-button, .json-import-label { color: white; border: none; padding: 15px 30px; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: 600; width: 100%; transition: transform 0.2s ease; text-align: center; display: block; }
+        .generate-button { background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%); }
+        .json-button { background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%); }
+        .json-import-label { background: linear-gradient(135deg, #1e90ff 0%, #90d5ff 100%); }
+        .generate-button:hover, .json-button:hover, .json-import-label:hover { transform: translateY(-2px); }
+        .output-container { margin-top: 30px; padding: 25px; background: #f8f9fa; border-radius: 10px; border: 2px solid #e9ecef; display: none; }
+        #question-summary { white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 14px; line-height: 1.8; background-color: #e9ecef; padding: 15px; border-radius: 8px; min-height: 50px; }
+        .output-content { white-space: pre-wrap; font-family: 'Courier New', monospace; font-size: 13px; line-height: 1.6; background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6; max-height: 500px; overflow-y: auto; }
+        .copy-button { background: #17a2b8; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-top: 15px; font-size: 14px; }
+        .copy-button:hover { background: #138496; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        .error-highlight { border-color: #ff4757 !important; box-shadow: 0 0 0 3px rgba(255, 71, 87, 0.2) !important; }
+        /* Modal Styles */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fefefe; margin: 10% auto; padding: 30px; border: 1px solid #888; width: 80%; max-width: 700px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header h2 { color: #2c5aa0; }
+        .close-button { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close-button:hover, .close-button:focus { color: black; text-decoration: none; }
+        #bulk-textarea { width: 100%; min-height: 300px; font-family: 'Courier New', monospace; font-size: 14px; }
+        #bulk-instructions { font-size: 14px; color: #666; background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+
+        @media (max-width: 768px) {
+            .grid-2, .grid-3, .button-group { grid-template-columns: 1fr; }
+            .form-container { padding: 20px; }
+            .header { padding: 20px; }
+            .header h1 { font-size: 1.8em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Tạo Bài Tập Theo Định Dạng</h1>
+            <p>Hệ thống tạo file Word hoàn chỉnh với mã nhận thức và tiêu chí cụ thể</p>
+        </div>
+
+        <div class="form-container">
+            <div class="section">
+                <div class="section-title">PHẦN 1: THÔNG TIN CHUNG</div>
+                <div class="grid-2">
+                    <div class="form-group"><label for="khoi">Khối:</label><select id="khoi" onchange="updateBaiOptions()"><option value="">-- Chọn khối --</option><option value="6">Khối 6</option><option value="7">Khối 7</option><option value="8">Khối 8</option><option value="9">Khối 9</option></select></div>
+                    <div class="form-group"><label for="bai">Bài (sẽ là tiêu đề chính):</label><select id="bai" onchange="updateAllCriteria(); updateQuestionSummary();" disabled><option value="">-- Vui lòng chọn khối trước --</option></select></div>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">PHẦN 1. Trắc nghiệm</div>
+                <div id="multiple-choice-questions"></div>
+                <button class="add-button" onclick="addMultipleChoiceQuestion()">➕ Thêm câu hỏi</button>
+                <button class="add-button" style="background: linear-gradient(135deg, #007bff 0%, #00d4ff 100%);" onclick="openBulkAddModal()">➕ Thêm hàng loạt (Trắc nghiệm)</button>
+            </div>
+
+            <div class="section">
+                <div class="section-title">PHẦN 2. Tự luận</div>
+                <div id="essay-questions"></div>
+                <button class="add-button" onclick="addEssayQuestion()">➕ Thêm câu hỏi</button>
+            </div>
+            
+            <div class="section">
+                <div class="section-title">Thống kê số câu hỏi</div>
+                <div id="question-summary">Chưa có câu hỏi nào được định nghĩa đầy đủ.</div>
+            </div>
+
+            <div class="button-group">
+                <button class="generate-button" onclick="generateDocument()">🚀 Tạo Tài Liệu</button>
+                <button class="json-button" onclick="exportToJson()">📦 Xuất JSON</button>
+                <label for="json-import-input" class="json-import-label">📂 Nhập JSON</label>
+                <input type="file" id="json-import-input" accept=".json" style="display: none;">
+            </div>
+
+            <div class="output-container" id="output-container">
+                <h3 style="margin-bottom: 15px; color: #2c5aa0;">📄 Nội dung tài liệu được tạo:</h3>
+                <div class="output-content" id="output-content"></div>
+                <button class="copy-button" onclick="copyToClipboard()">📋 Sao chép nội dung</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="bulk-add-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Thêm hàng loạt câu hỏi trắc nghiệm</h2>
+                <span class="close-button" onclick="closeBulkAddModal()">&times;</span>
+            </div>
+            <div id="bulk-instructions">
+                <strong>Định dạng yêu cầu:</strong>
+                <ul>
+                    <li>Dòng đầu tiên của câu hỏi có thể có hoặc không có số hiệu.</li>
+                    <li>Các câu hỏi phải được phân cách bằng một dòng trống.</li>
+                    <li>Thêm dấu <code>*</code> vào trước đáp án đúng.</li>
+                    <li>Thêm mục <code>ANSWER KEYS</code> ở cuối để cung cấp đáp án cho câu điền khuyết.</li>
+                </ul>
+                <p><b>Ví dụ:</b></p>
+                <pre>Câu 1.1 (NB): Câu hỏi có số hiệu...
+*A. Đáp án A
+
+Câu 1.2 (TH): Câu hỏi 2 ____.
+
+ANSWER KEYS
+1.2. đáp án điền khuyết</pre>
+            </div>
+            <textarea id="bulk-textarea" placeholder="Dán danh sách câu hỏi của bạn vào đây..."></textarea>
+            <button class="add-button" style="margin-top: 20px; width: 100%; padding: 15px;" onclick="processBulkQuestions()">Thêm / Cập nhật câu hỏi</button>
+        </div>
+    </div>
+
+
+    <script>
+        // --- DATA ---
+        const lessonData = { '6': ["Bài 1. Thông tin và dữ liệu", "Bài 2. Xử lí thông tin", "Bài 3. Thông tin trong máy tính", "Bài 4. Mạng máy tính", "Bài 5. Internet", "Bài 6. Mạng thông tin toàn cầu", "Bài 7. Tìm kiếm thông tin trên Internet", "Bài 8. Thư điện tử", "Bài 9. An toàn thông tin trên Internet", "Bài 10. Sơ đồ tư duy", "Bài 11. Định dạng văn bản", "Bài 12. Trình bày thông tin ở dạng bảng", "Bài 13. Thực hành: Tìm kiếm và thay thế", "Bài 14. Thực hành tổng hợp: Hoàn thiện sổ lưu niệm", "Bài 15. Thuật toán", "Bài 16. Các cấu trúc điều khiển", "Bài 17. Chương trình máy tính"], '7': ["Bài 1: Thiết bị vào - ra", "Bài 2: Phần mềm máy tính", "Bài 3: Quản lí dữ liệu trong máy tính", "Bài 4: Mạng xã hội và một số kênh trao đổi thông tin trên Internet", "Bài 5: Ứng xử trên mạng", "Bài 6: Làm quen với phần mềm bảng tính", "Bài 7: Tính toán tự động trên bảng tính", "Bài 8: Công cụ hỗ trợ tính toán", "Bài 9: Trình bày bảng tính", "Bài 10: Hoàn thiện bảng tính", "Bài 11: Tạo bài trình chiếu", "Bài 12: Định dạng đối tượng trên trang chiếu", "Bài 13: Thực hành tổng hợp: Hoàn thiện bài trình chiếu", "Bài 14: Thuật toán tìm kiếm tuần tự", "Bài 15: Thuật toán tìm kiếm nhị phân", "Bài 16: Thuật toán sắp xếp"], '8': ["Bài 1: Lược sử công cụ tính toán", "Bài 2: Thông tin trong môi trường số", "Bài 3: Thực hành: Khai thác thông tin số", "Bài 4: Đạo đức và văn hóa trong sử dụng công nghệ kĩ thuật số", "Bài 5: Sử dụng bảng tính giải quyết bài toán thực tế", "Bài 6: Sắp xếp và lọc dữ liệu", "Bài 7: Trình bày dữ liệu bằng biểu đồ", "Bài 8a: Làm việc với danh sách dạng liệt kê và hình ảnh trong văn bản", "Bài 8b: Phần mềm chỉnh sửa ảnh", "Bài 9a: Tạo đầu trang, chân trang cho văn bản", "Bài 9b: Thay đổi khung hình, kích thước ảnh", "Bài 10a: Định dạng nâng cao cho trang chiếu", "Bài 10b: Thêm văn bản, tạo hiệu ứng cho ảnh", "Bài 11a: Sử dụng văn bản mẫu tạo bài trình chiếu", "Bài 11b: Thực hành tổng hợp", "Bài 12: Từ thuật toán đến chương trình", "Bài 13: Biểu diễn dữ liệu", "Bài 14: Cấu trúc điều khiển", "Bài 15: Gỡ lỗi", "Bài 16: Tin học với nghề nghiệp"], '9': ["Bài 1. Thế giới kĩ thuật số", "Bài 2. Thông tin trong giải quyết vấn đề", "Bài 3. Thực hành: Đánh giá chất lượng thông tin", "Bài 4. Một số vấn đề pháp lí về sử dụng dịch vụ Internet", "Bài 5. Tìm hiểu phần mềm mô phỏng", "Bài 6. Thực hành: Khai thác phần mềm mô phỏng", "Bài 7. Trình bày thông tin trong trao đổi và hợp tác", "Bài 8. Thực hành: Sử dụng công cụ trực quan trình bày thông tin trong trao đổi và hợp tác", "a. Sử dụng bảng tính điện tử nâng cao", "Bài 9a. Sử dụng công cụ xác thực dữ liệu", "Bài 10a. Sử dụng hàm COUNTIF", "Bài 11a. Sử dụng hàm SUMIF", "Bài 12a. Sử dụng hàm IF", "Bài 13a. Hoàn thiện bảng tính quản lí tài chính gia đình", "b. Làm quen với phần mềm làm video", "Bài 9b. Các chức năng chính của phần mềm làm video", "Bài 10b. Chuẩn bị dữ liệu và dựng video", "Bài 11b. Thực hành: Dựng video theo kịch bản", "Bài 12b. Hoàn thành việc dựng video", "Bài 13b. Biên tập và xuất video", "Bài 14. Giải quyết vấn đề", "Bài 15. Bài toán tin học", "Bài 16. Thực hành: Lập chương trình máy tính", "Bài 17. Tin học và thế giới nghề nghiệp"] };
+        const criteriaData = {
+            "6": { 
+                "Bài 1. Thông tin và dữ liệu": { "NB": ["1.1 Phân biệt được thông tin với vật mang tin.", "1.2 Nhận biết được sự khác nhau giữa thông tin và dữ liệu."], "TH": ["2.1 Nêu được ví dụ minh hoạ về mối quan hệ giữa thông tin và dữ liệu.", "2.2 Nêu được ví dụ minh hoạ tầm quan trọng của thông tin."] }, 
+                "Bài 2. Xử lí thông tin": { "NB": ["1.1 Nêu được các bước cơ bản trong xử lí thông tin."], "VD": ["3.1 Giải thích được máy tính và các thiết bị số là công cụ hiệu quả để thu thập, lưu trữ, xử lí và truyền thông tin. Nêu được ví dụ minh hoạ cụ thể."] }, 
+                "Bài 3. Thông tin trong máy tính": { "NB": ["1.1 Biết được bit là đơn vị nhỏ nhất trong lưu trữ thông tin.", "1.2 Nêu được tên và độ lớn của các đơn vị cơ bản đo dung lượng thông tin."], "TH": ["2.1 Giải thích được có thể biểu diễn thông tin chỉ với hai kí hiệu 0 và 1."], "VDC": ["4.1 Xác định được khả năng lưu trữ của các thiết bị nhớ thông dụng."] }, 
+                "Bài 4. Mạng máy tính": { "NB": ["1.1 Nêu được khái niệm và lợi ích của mạng máy tính.", "1.2 Nêu được các thành phần chủ yếu của một mạng máy tính (máy tính và thiết bị kết nối) và tên của một vài thiết bị mạng cơ bản như: máy tính, cáp nối, Switch, Access Point,…"], "TH": ["2.1 Nêu được ví dụ cụ thể về trường hợp mạng không dây tiện dụng hơn mạng có dây."] }, 
+                "Bài 5. Internet": { "NB": ["1.1 Nêu được các đặc điểm và ích lợi chính của Internet."] }, 
+                "Bài 6. Mạng thông tin toàn cầu": { "NB": ["1.1 Trình bày được sơ lược về các khái niệm WWW, website, địa chỉ của website, trình duyệt.", "1.2 Xem và nêu được những thông tin chính trên trang web cho trước."], "VDC": ["4.1 Tìm kiếm được thông tin trên một số trang web thông dụng như: tra từ điển, xem thời tiết, tin thời sự,... để phục vụ cho nhu cầu học tập và cuộc sống."] }, 
+                "Bài 7. Tìm kiếm thông tin trên Internet": { "NB": ["1.1 Nêu được công dụng của máy tìm kiếm."], "TH": ["2.1 Xác định được từ khoá ứng với một mục đích tìm kiếm cho trước."] }, 
+                "Bài 8. Thư điện tử": { "NB": ["1.1 Biết cách đăng kí tài khoản thư điện tử."], "TH": ["2.1 Nêu được những ưu, nhược điểm cơ bản của dịch vụ thư điện tử so với các phương thức liên lạc khác."], "VDC": ["4.1 Thực hiện được một số thao tác cơ bản: tạo tài khoản email, đăng nhập tài khoản email, soạn thư, gửi thư, nhận thư, trả lời thư, chuyển tiếp thư và đăng xuất hộp thư trong một số tình huống thực tiễn."] }, 
+                "Bài 9. An toàn thông tin trên Internet": { "NB": ["1.1 Nêu được một số tác hại và nguy cơ bị hại khi tham gia Internet.", "1.2 Nêu được một vài cách thông dụng để bảo vệ, chia sẻ thông tin của bản thân và tập thể sao cho an toàn và hợp pháp."], "TH": ["2.1 Nêu và thực hiện được một số biện pháp cơ bản để phòng ngừa tác hại khi tham gia Internet với sự hướng dẫn của giáo viên.", "2.2 Trình bày được tầm quan trọng của sự an toàn và hợp pháp của thông tin cá nhân và tập thể, nêu được ví dụ minh hoạ.", "2.3 Nhận diện được một số thông điệp (chẳng hạn email, yêu cầu kết bạn, lời mời tham gia câu lạc bộ,...) lừa đảo hoặc mang nội dung xấu."], "VD": ["3.1 Thực hiện được các thao tác để bảo vệ thông tin và tài khoản cá nhân."] }, 
+                "Bài 10. Sơ đồ tư duy": { "TH": ["2.1 Giải thích được lợi ích của sơ đồ tư duy, nêu được nhu cầu sử dụng phần mềm sơ đồ tư duy trong học tập và trao đổi thông tin."], "VD": ["3.1 Sắp xếp được một cách logic và trình bày được dưới dạng sơ đồ tư duy các ý tưởng, khái niệm."], "VDC": ["4.1 Sử dụng được phần mềm để tạo sơ đồ tư duy đơn giản phục vụ học tập và trao đổi thông tin."] }, 
+                "Bài 11. Định dạng văn bản": { "NB": ["1.1 Nhận biết được tác dụng của công cụ căn lề, định dạng, tìm kiếm, thay thế trong phần mềm soạn thảo văn bản.", "1.2 Nêu được các chức năng đặc trưng của những phần mềm soạn thảo văn bản."], "VD": ["3.1 Thực hiện được việc định dạng văn bản, trình bày trang văn bản và in."], "VDC": ["4.1 Soạn thảo được văn bản phục vụ học tập và sinh hoạt hàng ngày."] }, 
+                "Bài 12. Trình bày thông tin ở dạng bảng": { "VD": ["3.2 Trình bày được thông tin ở dạng bảng."] }, 
+                "Bài 13. Thực hành: Tìm kiếm và thay thế": { "VD": ["3.3 Sử dụng được công cụ tìm kiếm và thay thế của phần mềm soạn thảo."] }, 
+                "Bài 14. Thực hành tổng hợp: Hoàn thiện sổ lưu niệm": { "VDC": ["4.1 Hoàn thiện được một sổ lưu niệm của lớp/nhóm dưới sự hướng dẫn của giáo viên, bao gồm văn bản và hình ảnh, định dạng các trang văn bản và in."] }, 
+                "Bài 15. Thuật toán": { "NB": ["1.1 Nêu được khái niệm thuật toán."], "TH": ["2.1 Nêu được một vài ví dụ minh hoạ về thuật toán."] }, 
+                "Bài 16. Các cấu trúc điều khiển": { "VD": ["3.1 Mô tả được thuật toán đơn giản có các cấu trúc tuần tự, rẽ nhánh và lặp dưới dạng liệt kê hoặc sơ đồ khối."] }, 
+                "Bài 17. Chương trình máy tính": { "NB": ["1.2 Biết được chương trình là mô tả một thuật toán để máy tính “hiểu” và thực hiện được."]
+                }
+            },
+            "7": {
+                "Bài 1: Thiết bị vào - ra": { "NB": ["1.1 Biết và nhận ra được các thiết bị vào/ra trong mô hình máy tính, tính đa dạng và hình dạng (chuột, bàn phím, màn hình, loa, cảm ứng, máy quét, camera, …).", "1.2 Biết được chức năng của một số thiết bị vào/ra trong thu thập, lưu trữ, xử lí và truyền thông tin."], "TH": ["2.1 Nêu ví dụ cụ thể về thao tác không đúng gây lỗi cho thiết bị hoặc hệ thống."], "VD": ["3.1 Thực hiện đúng các thao tác với thiết bị thông dụng."] },
+                "Bài 2: Phần mềm máy tính": { "NB": ["1.1 Nêu được tên một số phần mềm ứng dụng (luyện gõ phím, Word, Paint, …)."], "TH": ["2.1 Giải thích chức năng điều khiển của hệ điều hành, phân biệt với phần mềm ứng dụng.", "2.2 Phân biệt được loại tệp qua phần mở rộng."] },
+                "Bài 3: Quản lí dữ liệu trong máy tính": { "NB": ["1.1 Biết tệp chương trình cũng là dữ liệu, có thể lưu trữ trong máy tính.", "1.2 Nêu được một số biện pháp bảo vệ máy tính, tài khoản và dữ liệu cá nhân (mật khẩu, đăng xuất, sao lưu, quét virus…).", "1.3 Nêu được cách tổ chức thông tin trong máy tính: tệp, thư mục, đường dẫn."], "VD": ["3.1 Thao tác thành thạo với tệp và thư mục."] },
+                "Bài 4: Mạng xã hội và một số kênh trao đổi thông tin trên Internet": { "NB": ["1.1 Nhận biết một số website là mạng xã hội (Facebook, YouTube, Zalo, Instagram…).", "1.2 Nêu được tên kênh và thông tin chính (YouTube chia sẻ video; Website trường cung cấp thông tin giáo dục…).", "1.3 Nêu chức năng cơ bản của mạng xã hội: kết nối, giao lưu, chia sẻ, thảo luận, trao đổi thông tin."], "TH": ["2.1 Nêu ví dụ cụ thể về hậu quả khi sử dụng thông tin sai mục đích."], "VD": ["3.1 Sử dụng được một số chức năng cơ bản: tạo tài khoản, hồ sơ, kết nối bạn học, chia sẻ tài liệu, tạo nhóm trao đổi."] },
+                "Bài 5: Ứng xử trên mạng": { "NB": ["1.1 Biết tác hại của bệnh nghiện Internet.", "1.2 Nêu cách ứng xử hợp lí khi gặp thông tin xấu, không phù hợp lứa tuổi."], "TH": ["2.1 Nêu ví dụ về truy cập không hợp lệ vào nguồn thông tin/kênh truyền thông."], "VD": ["3.1 Biết nhờ người lớn tư vấn khi bị bắt nạt trên mạng.", "3.2 Lựa chọn biện pháp phòng tránh nghiện Internet."], "VDC": ["4.1 Thực hiện giao tiếp trực tuyến đúng quy tắc, lịch sự, có văn hoá."] },
+                "Bài 6: Làm quen với phần mềm bảng tính": { "NB": ["1.1 Nêu chức năng cơ bản của phần mềm bảng tính."], "VD": ["3.1 Thực hiện thao tác đơn giản với trang tính."] },
+                "Bài 7: Tính toán tự động trên bảng tính": { "TH": ["2.1 Giải thích việc dùng công thức trong bảng tính là cách tính toán tự động trên dữ liệu."] },
+                "Bài 8: Công cụ hỗ trợ tính toán": { "VD": ["3.1 Sử dụng được công cụ hỗ trợ tính toán. "] },
+                "Bài 9: Trình bày bảng tính": { "VD": ["3.2 Thực hiện phép toán thông dụng; sử dụng hàm đơn giản: MAX, MIN, SUM, AVERAGE, COUNT, …"] },
+                "Bài 10: Hoàn thiện bảng tính": { "VD": ["3.3 Sử dụng công thức và địa chỉ ô, tạo bảng tính có số liệu tính toán bằng công thức."], "VDC": ["4.1 Sử dụng bảng tính để giải quyết một số công việc học tập, đời sống đơn giản."] },
+                "Bài 11: Tạo bài trình chiếu": { "NB": ["1.1 Nêu chức năng cơ bản của phần mềm trình chiếu."], "VD": ["3.1 Tạo báo cáo có tiêu đề, cấu trúc phân cấp, ảnh minh hoạ, hiệu ứng động."] },
+                "Bài 12: Định dạng đối tượng trên trang chiếu": { "VD": ["3.2 Sử dụng định dạng văn bản, ảnh minh hoạ và hiệu ứng hợp lí.", "3.3 Sao chép dữ liệu từ văn bản sang trang trình chiếu."] },
+                "Bài 13: Thực hành tổng hợp: Hoàn thiện bài trình chiếu": { "VDC": ["4.1 Hoàn thiện được một bài trình chiếu theo yêu cầu dưới sự hướng dẫn của giáo viên."] },
+                "Bài 14: Thuật toán tìm kiếm tuần tự": { "NB": ["1.1 Nêu ý nghĩa của việc chia một bài toán thành bài toán nhỏ."], "TH": ["2.1 Giải thích một vài thuật toán tìm kiếm cơ bản bằng bước thủ công.", "2.2 Giải thích mối liên quan giữa tìm kiếm, nêu ví dụ minh hoạ."], "VD": ["3.1 Biểu diễn và mô phỏng hoạt động của thuật toán tìm kiếm trên bộ dữ liệu nhỏ."] },
+                "Bài 15: Thuật toán tìm kiếm nhị phân": { "TH": ["2.3 Giải thích một vài thuật toán tìm kiếm cơ bản bằng bước thủ công.", "2.4 Giải thích mối liên quan giữa tìm kiếm, nêu ví dụ minh hoạ."], "VD": ["3.2 Biểu diễn và mô phỏng hoạt động của thuật toán tìm kiếm trên bộ dữ liệu nhỏ."] },
+                "Bài 16: Thuật toán sắp xếp": { "TH": ["2.5 Giải thích một vài thuật toán sắp xếp bằng bước thủ công.", "2.6 Giải thích mối liên quan giữa sắp xếp, nêu ví dụ minh hoạ."], "VD": ["3.3 Biểu diễn và mô phỏng hoạt động của thuật toán sắp xếp trên bộ dữ liệu nhỏ."]
+                }
+            },
+            "8": {
+                "Bài 1: Lược sử công cụ tính toán": { "NB": ["1.1 Trình bày được sơ lược lịch sử phát triển máy tính."], "TH": ["2.1 Nêu được ví dụ cho thấy sự phát triển máy tính đem lại thay đổi lớn cho xã hội.", "2.2 Trình bày được tầm quan trọng của việc biết khai thác các nguồn thông tin đáng tin cậy, có ví dụ minh hoạ."] },
+                "Bài 2: Thông tin trong môi trường số": { "NB": ["1.1 Nêu được các đặc điểm của thông tin số: đa dạng, thu thập nhanh và nhiều, dung lượng lớn, có bản quyền, độ tin cậy khác nhau, có công cụ tìm kiếm/chuyển đổi/truyền/xử lí hiệu quả."], "TH": ["2.1 Nêu ví dụ minh hoạ sử dụng công cụ tìm kiếm, xử lí, trao đổi thông tin trong môi trường số."] },
+                "Bài 3: Thực hành: Khai thác thông tin số": { "TH": ["2.2 Xác định được lợi ích của thông tin tìm được trong giải quyết vấn đề, có ví dụ minh hoạ."], "VD": ["3.1 Sử dụng được công cụ tìm kiếm, xử lí và trao đổi thông tin trong môi trường số.", "3.2 Chủ động tìm kiếm thông tin để thực hiện nhiệm vụ học tập (qua bài tập cụ thể)."] },
+                "Bài 4: Đạo đức và văn hóa trong sử dụng công nghệ kĩ thuật số": { "TH": ["2.1 Nhận biết và giải thích được một số biểu hiện vi phạm đạo đức, pháp luật, thiếu văn hoá khi dùng công nghệ số (quay phim/chụp ảnh trái phép, dùng sản phẩm vi phạm bản quyền…).", "2.2 Nêu được ví dụ về truy cập không hợp lệ vào nguồn thông tin/kênh truyền thông."], "VD": ["3.1 Khi tạo sản phẩm số luôn thể hiện tính đạo đức, văn hoá và tuân thủ pháp luật."] },
+                "Bài 5: Sử dụng bảng tính giải quyết bài toán thực tế": { "TH": ["2.1 Giải thích sự khác nhau giữa địa chỉ tương đối và địa chỉ tuyệt đối của ô tính.", "2.2 Giải thích sự thay đổi địa chỉ tương đối khi sao chép công thức."], "VD": ["3.1 Sao chép dữ liệu từ tệp văn bản, trang trình chiếu sang trang tính."] },
+                "Bài 6: Sắp xếp và lọc dữ liệu": { "VD": ["3.2 Lọc và sắp xếp dữ liệu.", "3.3 Nêu được tình huống thực tế cần sử dụng chức năng sắp xếp và lọc dữ liệu."], "VDC": ["4.1 Sử dụng được phần mềm bảng tính để giải quyết bài toán thực tế."] },
+                "Bài 7: Trình bày dữ liệu bằng biểu đồ": { "VD": ["3.4 Thực hiện được thao tác tạo biểu đồ.", "3.5 Nêu được tình huống thực tế cần sử dụng chức năng vẽ biểu đồ."] },
+                "Bài 8a: Làm việc với danh sách dạng liệt kê và hình ảnh trong văn bản": { "VD": ["3.1 Thực hiện được các thao tác: Chèn thêm, xoá bỏ, co dãn hình ảnh.", "3.2 Vẽ hình đồ hoạ trong văn bản.", "3.3 Tạo danh sách dạng liệt kê."] },
+                "Bài 8b: Phần mềm chỉnh sửa ảnh": { "VD": ["3.1 Thực hiện được các thao tác chỉnh sửa ảnh đơn giản."] },
+                "Bài 9a: Tạo đầu trang, chân trang cho văn bản": { "VD": ["3.1 Thực hiện được thao tác đánh số trang, thêm đầu trang và chân trang."] },
+                "Bài 9b: Thay đổi khung hình, kích thước ảnh": { "VD": ["3.1 Thay đổi được khung hình, kích thước của một ảnh cho trước."] },
+                "Bài 10a: Định dạng nâng cao cho trang chiếu": { "VD": ["3.1 Chọn đặt được màu sắc, cỡ chữ hài hoà, hợp lí với nội dung."] },
+                "Bài 10b: Thêm văn bản, tạo hiệu ứng cho ảnh": { "VD": ["3.1 Thêm được các hiệu ứng động đơn giản cho văn bản và ảnh."] },
+                "Bài 11a: Sử dụng văn bản mẫu tạo bài trình chiếu": { "VD": ["3.2 Sử dụng các bản mẫu (template) để tạo bài trình chiếu."] },
+                "Bài 11b: Thực hành tổng hợp": { "VDC": ["4.1 Tạo được các sản phẩm số bằng phần mềm trình chiếu phục vụ học tập, giao lưu và trao đổi thông tin."] },
+                "Bài 12: Từ thuật toán đến chương trình": { "TH": ["2.1 Hiểu được chương trình là dãy các lệnh điều khiển máy tính thực hiện một thuật toán."], "VD": ["3.1 Mô tả được kịch bản đơn giản dưới dạng thuật toán và tạo được một chương trình đơn giản."] },
+                "Bài 13: Biểu diễn dữ liệu": { "NB": ["1.1 Biết được bit là đơn vị nhỏ nhất trong lưu trữ thông tin.", "1.2 Nêu được tên và độ lớn của các đơn vị cơ bản đo dung lượng thông tin."], "TH": ["2.1 Giải thích được có thể biểu diễn thông tin chỉ với hai kí hiệu 0 và 1."] },
+                "Bài 14: Cấu trúc điều khiển": { "VD": ["3.1 Thể hiện được cấu trúc tuần tự, rẽ nhánh và lặp ở chương trình trong môi trường lập trình trực quan."] },
+                "Bài 15: Gỡ lỗi": { "VDC": ["4.1 Chạy thử, tìm lỗi và sửa được lỗi cho chương trình."] },
+                "Bài 16: Tin học với nghề nghiệp": { "NB": ["1.1 Nêu được một số nghề nghiệp mà ứng dụng tin học sẽ làm tăng hiệu quả công việc.", "1.2 Nêu được tên một số nghề thuộc lĩnh vực tin học và một số nghề liên quan đến ứng dụng tin học."], "TH": ["2.1 Nhận thức và trình bày được vấn đề bình đẳng giới trong việc sử dụng máy tính và trong ứng dụng tin học, nêu được ví dụ minh hoạ."]
+                }
+            },
+            "9": {
+                "Bài 1. Thế giới kĩ thuật số": { "NB": ["1.1 Nêu được các cách kết nối phổ biến giữa máy tính và các thiết bị số."], "TH": ["2.1 Phân tích được sự thay đổi của việc truyền tin, trao đổi thông tin trong thế giới kĩ thuật số."] },
+                "Bài 2. Thông tin trong giải quyết vấn đề": { "NB": ["1.1 Trình bày được một số thành phần cơ bản của hệ thống giải quyết vấn đề bằng công nghệ số: thông tin đầu vào, xử lí, thông tin đầu ra."], "TH": ["2.1 Mô tả được một số vấn đề trong thực tế và các thành phần của chúng để giải quyết bằng công nghệ số."] },
+                "Bài 3. Thực hành: Đánh giá chất lượng thông tin": { "VD": ["3.1 Đánh giá được mức độ tin cậy của một nguồn thông tin số.", "3.2 Thực hành đánh giá các nguồn thông tin trên Internet."] },
+                "Bài 4. Một số vấn đề pháp lí về sử dụng dịch vụ Internet": { "NB": ["1.1 Nêu được những vấn đề pháp lí cơ bản liên quan đến quyền và nghĩa vụ khi sử dụng Internet: bản quyền, sở hữu trí tuệ, quyền riêng tư, an ninh mạng.", "1.2 Nêu được các hành vi vi phạm pháp luật khi tham gia môi trường số."], "VDC": ["4.1 Đề xuất được giải pháp để sử dụng Internet có trách nhiệm, an toàn và hợp pháp."] },
+                "Bài 5. Tìm hiểu phần mềm mô phỏng": { "NB": ["1.1 Nêu được một số phần mềm mô phỏng phổ biến (khoa học, kĩ thuật, quân sự,…)."], "TH": ["2.1 Mô tả được một số khả năng của phần mềm mô phỏng: tính tương tác, trực quan, đơn giản hoá vấn đề,..."] },
+                "Bài 6. Thực hành: Khai thác phần mềm mô phỏng": { "VD": ["3.1 Sử dụng phần mềm mô phỏng đơn giản để tìm hiểu các kiến thức mới."] },
+                "Bài 7. Trình bày thông tin trong trao đổi và hợp tác": { "TH": ["2.1 Trình bày được ý nghĩa của trao đổi và hợp tác để tạo ra một sản phẩm số. Đánh giá được ưu điểm, nhược điểm của việc làm nhóm."], "VD": ["3.1 Sử dụng được hình ảnh, biểu đồ, video trong trao đổi thông tin và hợp tác."], "VDC": ["4.1 Sử dụng được bài trình chiếu và sơ đồ tư duy trong trao đổi thông tin và hợp tác."] },
+                "Bài 8. Thực hành: Sử dụng công cụ trực quan trình bày thông tin trong trao đổi và hợp tác": { "VDC": ["4.1 Thực hiện được trao đổi và hợp tác thông qua các sản phẩm số, dưới sự hướng dẫn của giáo viên."] },
+                "a. Sử dụng bảng tính điện tử nâng cao": { "Bài 9a. Sử dụng công cụ xác thực dữ liệu": { "VD": ["3.1 Sử dụng được công cụ xác thực dữ liệu."] }, "Bài 10a. Sử dụng hàm COUNTIF": { "VD": ["3.2 Sử dụng được hàm COUNTIF để đếm dữ liệu theo điều kiện."] }, "Bài 11a. Sử dụng hàm SUMIF": { "VD": ["3.3 Sử dụng được hàm SUMIF để tính tổng dữ liệu theo điều kiện."] }, "Bài 12a. Sử dụng hàm IF": { "VD": ["3.4 Sử dụng được hàm IF để giải quyết bài toán có nhiều trường hợp."] }, "Bài 13a. Hoàn thiện bảng tính quản lí tài chính gia đình": { "VDC": ["4.1 Hoàn thiện được bảng tính quản lí chi tiêu cho một hộ gia đình."] } },
+                "b. Làm quen với phần mềm làm video": { "Bài 9b. Các chức năng chính của phần mềm làm video": { "NB": ["1.1 Nêu được một số chức năng cơ bản của phần mềm làm video."], "TH": ["2.1 Mô tả được quy trình tạo ra một video."] }, "Bài 10b. Chuẩn bị dữ liệu và dựng video": { "VD": ["3.1 Chuẩn bị được các dữ liệu: văn bản, hình ảnh, video, nhạc nền, thuyết minh,…", "3.2 Dựng được video ngắn (1-2 phút) có phụ đề."] }, "Bài 11b. Thực hành: Dựng video theo kịch bản": { "VD": ["3.3 Dựng được video ngắn (1-2 phút) có phụ đề theo một kịch bản cho trước."] }, "Bài 12b. Hoàn thành việc dựng video": { "VD": ["3.4 Hoàn thành được một video ngắn: chèn hiệu ứng, chuyển cảnh, thêm nhạc nền, thuyết minh, phụ đề."] }, "Bài 13b. Biên tập và xuất video": { "VDC": ["4.1 Biên tập và xuất được một video ngắn (1-2 phút) phục vụ một nhiệm vụ cụ thể."] } },
+                "Bài 14. Giải quyết vấn đề": { "NB": ["1.1 Nêu được quy trình con người giao bài toán cho máy tính giải quyết."], "TH": ["2.1 Trình bày được quá trình giải quyết vấn đề và mô tả được giải pháp dưới dạng thuật toán (phương pháp liệt kê các bước hoặc sơ đồ khối).", "2.2 Giải thích được trong quy trình giải quyết vấn đề có những bước (những vấn đề nhỏ hơn) có thể chuyển giao cho máy tính thực hiện, nêu ví dụ minh hoạ.", "2.3 Giải thích được khái niệm bài toán trong tin học là một nhiệm vụ có thể giao cho máy tính thực hiện, nêu ví dụ minh hoạ."], "VD": ["3.1 Vận dụng được quy trình giải quyết vấn đề để thực hiện một số nhiệm vụ đơn giản."] },
+                "Bài 15. Bài toán tin học": { "NB": ["1.1 Phân tích được một bài toán đơn giản thành ba thành phần: Input, Output và Thuật toán."], "TH": ["2.3 Nêu được một số ví dụ thực tiễn minh hoạ các thuật toán cơ bản."] },
+                "Bài 16. Thực hành: Lập chương trình máy tính": { "VD": ["3.1 Thể hiện được cấu trúc tuần tự, rẽ nhánh và lặp trong mô tả thuật toán.", "3.2 Lập trình được một số bài toán đơn giản."], "VDC": ["4.1 Chạy thử, tìm lỗi và sửa được lỗi cho chương trình."] },
+                "Bài 17. Tin học và thế giới nghề nghiệp": { "NB": ["1.1 Nêu được một vài ví dụ minh hoạ tin học trong công việc.", "1.2 Nêu được tên một số nghề thuộc lĩnh vực tin học và một số nghề liên quan đến ứng dụng tin học."], "TH": ["2.1 Nêu và giải thích được ý kiến cá nhân (thích hay không thích,...) về một nhóm nghề nào đó.", "2.2 Giải thích được cả nam và nữ đều có thể thích hợp với các ngành nghề trong lĩnh vực tin học, nêu ví dụ minh hoạ."], "VD": ["3.1 Tìm hiểu được (thông qua Internet và những kênh thông tin khác) công việc ở một số doanh nghiệp, công ti có sử dụng nhân lực thuộc các nhóm ngành đã được giới thiệu."]
+                }
+            }
+        };
+        let mcQuestionCount = 0, essayQuestionCount = 0, debounceTimer;
+
+        // --- CÁC HÀM CẬP NHẬT GIAO DIỆN ---
+        function updateBaiOptions() { const khoiSelect = document.getElementById('khoi'), baiSelect = document.getElementById('bai'), selectedKhoi = khoiSelect.value; baiSelect.innerHTML = ''; if (selectedKhoi && lessonData[selectedKhoi]) { baiSelect.disabled = false; const defaultOption = document.createElement('option'); defaultOption.value = ""; defaultOption.textContent = "-- Chọn bài --"; baiSelect.appendChild(defaultOption); const lessons = lessonData[selectedKhoi]; lessons.forEach(lesson => { const option = document.createElement('option'); option.value = lesson; option.textContent = lesson; if (lesson.startsWith('a. ') || lesson.startsWith('b. ')) { option.disabled = true; option.style.fontWeight = 'bold'; option.style.backgroundColor = '#f0f0f0'; } baiSelect.appendChild(option); }); } else { baiSelect.disabled = true; const defaultOption = document.createElement('option'); defaultOption.value = ""; defaultOption.textContent = "-- Vui lòng chọn khối trước --"; baiSelect.appendChild(defaultOption); } updateAllCriteria(); updateQuestionSummary(); }
+        function updateCriteriaOptions(questionContainer) { const selectedKhoi = document.getElementById('khoi').value, selectedBai = document.getElementById('bai').value, selectedLevel = questionContainer.querySelector('select[name="cognitive-level"]').value, criteriaSelect = questionContainer.querySelector('select[name="criteria"]'); criteriaSelect.innerHTML = ''; const criteriaList = criteriaData[selectedKhoi]?.[selectedBai]?.[selectedLevel]; if (criteriaList) { const defaultOption = document.createElement('option'); defaultOption.value = ""; defaultOption.textContent = "-- Chọn tiêu chí --"; criteriaSelect.appendChild(defaultOption); criteriaList.forEach(criterion => { const option = document.createElement('option'); const criterionCode = criterion.split(' ')[0]; option.value = criterionCode; option.textContent = criterion; criteriaSelect.appendChild(option); }); } else { const defaultOption = document.createElement('option'); defaultOption.value = ""; defaultOption.textContent = "-- Không có dữ liệu tiêu chí --"; criteriaSelect.appendChild(defaultOption); } }
+        function updateAllCriteria() { document.querySelectorAll('.question-container').forEach(qc => updateCriteriaOptions(qc)); updateQuestionSummary(); }
+        function updateQuestionSummary() { const summary = {}; const baiSelect = document.getElementById('bai'); if (!baiSelect.value) { document.getElementById('question-summary').textContent = "Vui lòng chọn bài để xem thống kê."; return; } const baiNumber = getBaiNumber(baiSelect); if (!baiNumber) { document.getElementById('question-summary').textContent = "Đang chờ định nghĩa câu hỏi..."; return; } document.querySelectorAll('.question-container').forEach(question => { const level = question.querySelector('select[name="cognitive-level"]').value, criterion = question.querySelector('select[name="criteria"]').value; if (criterion) { const key = `B${baiNumber}-${level}-${criterion}`; summary[key] = (summary[key] || 0) + 1; } }); const summaryDiv = document.getElementById('question-summary'); let outputText = ""; for (const key in summary) { outputText += `${key}: ${summary[key]}\n`; } summaryDiv.textContent = outputText || "Chưa có câu hỏi nào được định nghĩa đầy đủ (thiếu tiêu chí)."; }
+        function debounceParse(textareaElement) { clearTimeout(debounceTimer); debounceTimer = setTimeout(() => { parseQuestion(textareaElement); }, 500); }
+        function getBaiNumber(baiSelect) { const selectedBaiText = baiSelect.options[baiSelect.selectedIndex]?.text; if (!selectedBaiText) return null; const baiNumberMatch = selectedBaiText.match(/Bài (\d+)/); return baiNumberMatch ? baiNumberMatch[1] : null; }
+        
+        // --- CÁC HÀM THÊM / XÓA CÂU HỎI ---
+        function parseQuestion(textareaElement) {
+            const questionContainer = textareaElement.closest('.question-container');
+            if (!questionContainer) return;
+            const fullText = textareaElement.value;
+            const lines = fullText.split(/\r?\n/).filter(line => line.trim() !== '');
+            const fillInTheBlankPattern = /\.{3,}|_{3,}/;
+            if (lines.length === 1 && fillInTheBlankPattern.test(fullText)) {
+                const questionTypeSelect = questionContainer.querySelector('select[name="question-type"]');
+                questionTypeSelect.value = 'fill-blank';
+                questionTypeSelect.dispatchEvent(new Event('change'));
+                return;
+            }
+            if (lines.length < 2) return;
+            const questionLine = lines[0];
+            const optionLines = lines.slice(1);
+            const hasValidOption = optionLines.some(line => /^\s*\*?[A-Da-d][.)]/.test(line.trim()));
+            if (!hasValidOption && optionLines.length > 0) { return; }
+            const optionInputs = questionContainer.querySelectorAll('.option-text');
+            const optionCheckboxes = questionContainer.querySelectorAll('.correct-checkbox');
+            optionInputs.forEach(input => input.value = '');
+            optionCheckboxes.forEach(checkbox => checkbox.checked = false);
+            optionLines.forEach((line, index) => {
+                if (index < optionInputs.length) {
+                    const isCorrect = line.trim().startsWith('*');
+                    let cleanText = line.trim();
+                    if (isCorrect) cleanText = cleanText.substring(1).trim();
+                    cleanText = cleanText.replace(/^[A-Da-d][.)]\s*/, '').trim();
+                    optionInputs[index].value = cleanText;
+                    optionCheckboxes[index].checked = isCorrect;
+                }
+            });
+            textareaElement.value = questionLine;
+            updateQuestionSummary();
+        }
+
+        function addMultipleChoiceQuestion() { mcQuestionCount++; const container = document.getElementById('multiple-choice-questions'); const questionDiv = document.createElement('div'); questionDiv.className = 'question-container'; questionDiv.id = `mc-question-${mcQuestionCount}`; questionDiv.innerHTML = `<div class="question-header"><div class="question-title">Câu hỏi trắc nghiệm ${mcQuestionCount}</div><button class="remove-question" onclick="removeQuestion('mc-question-${mcQuestionCount}')">🗑️ Xóa</button></div><div class="grid-3"><div class="form-group"><label>Mức độ nhận thức:</label><select name="cognitive-level" onchange="updateCriteriaOptions(this.closest('.question-container')); updateQuestionSummary();"><option value="NB">NB - Nhận biết</option><option value="TH">TH - Thông hiểu</option><option value="VD">VD - Vận dụng</option><option value="VDC">VDC - Vận dụng cao</option></select></div><div class="form-group"><label>Tiêu chí (quyết định số câu):</label><select name="criteria" onchange="updateQuestionSummary()"><option value="">-- Chọn các mục trên --</option></select></div><div class="form-group"><label>Loại câu hỏi:</label><select name="question-type" onchange="updateQuestionType(this, ${mcQuestionCount})"><option value="multiple-choice">Trắc nghiệm nhiều lựa chọn</option><option value="multiple-answer">Trắc nghiệm nhiều đáp án đúng</option><option value="fill-blank">Điền khuyết</option></select></div></div><div class="form-group"><label>Nội dung câu hỏi:</label><textarea name="question-content" placeholder="Dán câu hỏi và các lựa chọn tại đây..." oninput="debounceParse(this)"></textarea></div><div class="options-container" id="options-${mcQuestionCount}"><label>Các lựa chọn (sẽ được tự động điền):</label><div class="option-group"><input type="checkbox" class="correct-checkbox" onchange="updateQuestionSummary()"><input type="text" class="option-text" placeholder="Lựa chọn A"></div><div class="option-group"><input type="checkbox" class="correct-checkbox" onchange="updateQuestionSummary()"><input type="text" class="option-text" placeholder="Lựa chọn B"></div><div class="option-group"><input type="checkbox" class="correct-checkbox" onchange="updateQuestionSummary()"><input type="text" class="option-text" placeholder="Lựa chọn C"></div><div class="option-group"><input type="checkbox" class="correct-checkbox" onchange="updateQuestionSummary()"><input type="text" class="option-text" placeholder="Lựa chọn D"></div></div><div class="form-group" id="answer-${mcQuestionCount}" style="display: none;"><label>Đáp án:</label><input type="text" name="answer" placeholder="Nhập đáp án cho câu điền khuyết..."></div>`; container.appendChild(questionDiv); updateCriteriaOptions(questionDiv); updateQuestionSummary(); }
+        function addEssayQuestion() { essayQuestionCount++; const container = document.getElementById('essay-questions'); const questionDiv = document.createElement('div'); questionDiv.className = 'question-container'; questionDiv.id = `essay-question-${essayQuestionCount}`; questionDiv.innerHTML = `<div class="question-header"><div class="question-title">Câu hỏi tự luận ${essayQuestionCount}</div><button class="remove-question" onclick="removeQuestion('essay-question-${essayQuestionCount}')">🗑️ Xóa</button></div><div class="grid-3"><div class="form-group"><label>Mức độ nhận thức:</label><select name="cognitive-level" onchange="updateCriteriaOptions(this.closest('.question-container')); updateQuestionSummary();"><option value="NB">NB - Nhận biết</option><option value="TH">TH - Thông hiểu</option><option value="VD">VD - Vận dụng</option><option value="VDC">VDC - Vận dụng cao</option></select></div><div class="form-group"><label>Tiêu chí (quyết định số câu):</label><select name="criteria" onchange="updateQuestionSummary()"><option value="">-- Chọn các mục trên --</option></select></div><div class="form-group"><label>Loại câu hỏi:</label><select name="essay-type"><option value="situation">Tự luận tình huống</option><option value="analysis">Tự luận phân tích</option><option value="explanation">Tự luận giải thích</option><option value="comparison">Tự luận so sánh</option></select></div></div><div class="form-group"><label>Nội dung (có thể bao gồm tình huống và yêu cầu):</label><textarea name="requirements" placeholder="Nhập toàn bộ nội dung câu hỏi tự luận ở đây..."></textarea></div>`; container.appendChild(questionDiv); updateCriteriaOptions(questionDiv); updateQuestionSummary(); }
+        function updateQuestionType(select, questionId) { const optionsContainer = document.getElementById(`options-${questionId}`), answerContainer = document.getElementById(`answer-${questionId}`); if (select.value === 'fill-blank') { optionsContainer.style.display = 'none'; answerContainer.style.display = 'block'; } else { optionsContainer.style.display = 'block'; answerContainer.style.display = 'none'; } }
+        function removeQuestion(questionId) { const element = document.getElementById(questionId); if (element) { element.remove(); updateQuestionSummary(); } }
+        
+        // --- CÁC HÀM XUẤT DỮ LIỆU ---
+        function generateDocument() {
+            document.querySelectorAll('.error-highlight').forEach(el => el.classList.remove('error-highlight'));
+            const validationErrors = [];
+            const allQuestions = document.querySelectorAll('.question-container');
+            allQuestions.forEach(question => {
+                const criteriaSelect = question.querySelector('select[name="criteria"]');
+                if (criteriaSelect && !criteriaSelect.value) {
+                    const questionTitle = question.querySelector('.question-title').textContent;
+                    validationErrors.push(questionTitle);
+                    criteriaSelect.classList.add('error-highlight');
+                }
+            });
+            if (validationErrors.length > 0) {
+                alert(`Vui lòng chọn "Tiêu chí" đầy đủ cho các câu hỏi sau:\n- ${validationErrors.join('\n- ')}`);
+                return; 
+            }
+            const baiSelect = document.getElementById('bai');
+            const bai = baiSelect.value.trim(); 
+            let mcContent = "", essayContent = "", answerKeysContent = ""; 
+            const criteriaCounter = {};
+
+            const allQuestionElements = document.querySelectorAll('.question-container');
+            
+            // Tách câu hỏi trắc nghiệm và tự luận
+            const mcQuestions = Array.from(allQuestionElements).filter(q => q.id.startsWith('mc-question'));
+            const essayQuestions = Array.from(allQuestionElements).filter(q => q.id.startsWith('essay-question'));
+            
+            // Xử lý trắc nghiệm
+            if (mcQuestions.length > 0) {
+                mcContent += "Phần 1. Trắc nghiệm\n";
+                mcQuestions.forEach((question, index) => { 
+                    const cognitiveLevel = question.querySelector('select[name="cognitive-level"]').value;
+                    const criteria = question.querySelector('select[name="criteria"]').value.trim();
+                    const questionContent = question.querySelector('textarea[name="question-content"]').value;
+                    
+                    let questionNumber;
+                    if (criteria) {
+                        const counterKey = criteria;
+                        criteriaCounter[counterKey] = (criteriaCounter[counterKey] || 0) + 1;
+                        questionNumber = `${criteria}.${criteriaCounter[counterKey]}`;
+                    } else {
+                        questionNumber = `(Chưa có tiêu chí ${index + 1})`;
+                    }
+
+                    mcContent += `Câu ${questionNumber} (${cognitiveLevel}): ${questionContent}\n`; 
+                    const questionTypeFromSelect = question.querySelector('select[name="question-type"]').value;
+                    if (questionTypeFromSelect === 'fill-blank') { 
+                        const answer = question.querySelector('input[name="answer"]').value; 
+                        if (answer.trim()) answerKeysContent += `${questionNumber}. ${answer}\n`; 
+                    } else { 
+                        const options = question.querySelectorAll('.option-group');
+                        const correctAnswers = [];
+                        const checkedCount = question.querySelectorAll('.correct-checkbox:checked').length;
+                        const useMultiAnswerFormat = (questionTypeFromSelect === 'multiple-answer' || checkedCount > 1); 
+                        options.forEach((option, optionIndex) => { 
+                            const isCorrect = option.querySelector('.correct-checkbox').checked;
+                            const optionText = option.querySelector('.option-text').value; 
+                            if (optionText) { 
+                                let finalOptionText = optionText; 
+                                const prefixRegex = /^[A-Da-d][.)]\s*/; 
+                                let letter; 
+                                if (useMultiAnswerFormat) { 
+                                    letter = String.fromCharCode(97 + optionIndex); 
+                                    if (!prefixRegex.test(optionText)) finalOptionText = `${letter}) ${optionText}`; 
+                                    if(isCorrect) correctAnswers.push(letter); 
+                                } else { 
+                                    letter = String.fromCharCode(65 + optionIndex); 
+                                    if (!prefixRegex.test(optionText)) finalOptionText = `${letter}. ${optionText}`; 
+                                    if(isCorrect) correctAnswers.push(letter); 
+                                } 
+                                mcContent += `${isCorrect ? '*' : ''}${finalOptionText}\n`; 
+                            } 
+                        }); 
+                        if (correctAnswers.length > 0) { 
+                            if(useMultiAnswerFormat) { 
+                                let ds_string = `${questionNumber}: `; 
+                                options.forEach((opt, idx) => { 
+                                    const optText = opt.querySelector('.option-text').value; 
+                                    if(optText) { 
+                                        const letter = String.fromCharCode(97 + idx); 
+                                        const isCorr = opt.querySelector('.correct-checkbox').checked; 
+                                        ds_string += `${letter})${isCorr ? 'Đ' : 'S'} `; 
+                                    } 
+                                }); 
+                                answerKeysContent += ds_string.trim() + '\n'; 
+                            } else { 
+                                answerKeysContent += `${questionNumber}. ${correctAnswers.join(', ')}\n`; 
+                            } 
+                        } 
+                        mcContent += '\n'; 
+                    } 
+                }); 
+            } 
+            
+            // Xử lý tự luận
+            if (essayQuestions.length > 0) {
+                essayContent += "Phần 2. Tự luận\n";
+                essayQuestions.forEach((question, index) => { 
+                    const cognitiveLevel = question.querySelector('select[name="cognitive-level"]').value;
+                    const criteria = question.querySelector('select[name="criteria"]').value.trim();
+                    const requirements = question.querySelector('textarea[name="requirements"]').value;
+                    
+                    let questionNumber;
+                     if (criteria) {
+                        const counterKey = criteria;
+                        criteriaCounter[counterKey] = (criteriaCounter[counterKey] || 0) + 1;
+                        questionNumber = `${criteria}.${criteriaCounter[counterKey]}`;
+                    } else {
+                        questionNumber = `(Chưa có tiêu chí ${index + 1})`;
+                    }
+
+                    essayContent += `Câu ${questionNumber} (${cognitiveLevel}):\n${requirements}\n\n`; 
+                }); 
+            } 
+
+            let finalContent = `${bai}\n\n`; 
+            if (mcContent) finalContent += mcContent; 
+            if (answerKeysContent) finalContent += "ANSWER KEYS\n" + answerKeysContent + "\n"; 
+            if (essayContent) finalContent += essayContent; 
+            document.getElementById('output-content').textContent = finalContent; 
+            document.getElementById('output-container').style.display = 'block'; 
+            document.getElementById('output-container').scrollIntoView({ behavior: 'smooth' }); 
+        }
+
+        function exportToJson() {
+            const criteriaCounter = {};
+            const data = { thongTinChung: { khoi: document.getElementById('khoi').value, bai: document.getElementById('bai').value }, tracNghiem: [], tuLuan: [] }; 
+            
+            document.querySelectorAll('#multiple-choice-questions .question-container').forEach((q, index) => { 
+                const criteria = q.querySelector('select[name="criteria"]').value.trim();
+                let questionNumber;
+                if (criteria) {
+                    const counterKey = criteria;
+                    criteriaCounter[counterKey] = (criteriaCounter[counterKey] || 0) + 1;
+                    questionNumber = `${criteria}.${criteriaCounter[counterKey]}`;
+                } else {
+                    questionNumber = `tn-${index + 1}`;
+                }
+
+                const questionData = { soCau: questionNumber, tieuChi: criteria, mucDo: q.querySelector('select[name="cognitive-level"]').value, loai: q.querySelector('select[name="question-type"]').value, noiDung: q.querySelector('textarea[name="question-content"]').value, luaChon: [], dapAn: null }; 
+                if (questionData.loai === 'fill-blank') { 
+                    questionData.dapAn = q.querySelector('input[name="answer"]').value; 
+                } else { 
+                    q.querySelectorAll('.option-group').forEach(opt => { 
+                        const text = opt.querySelector('.option-text').value; 
+                        if (text) { questionData.luaChon.push({ text: text, correct: opt.querySelector('.correct-checkbox').checked }); } 
+                    }); 
+                } 
+                data.tracNghiem.push(questionData); 
+            }); 
+
+            document.querySelectorAll('#essay-questions .question-container').forEach((q, index) => { 
+                const criteria = q.querySelector('select[name="criteria"]').value.trim();
+                 let questionNumber;
+                if (criteria) {
+                    const counterKey = criteria;
+                    criteriaCounter[counterKey] = (criteriaCounter[counterKey] || 0) + 1;
+                    questionNumber = `${criteria}.${criteriaCounter[counterKey]}`;
+                } else {
+                    questionNumber = `tl-${index + 1}`;
+                }
+
+                data.tuLuan.push({ soCau: questionNumber, tieuChi: criteria, mucDo: q.querySelector('select[name="cognitive-level"]').value, loai: q.querySelector('select[name="essay-type"]').value, noiDung: q.querySelector('textarea[name="requirements"]').value }); 
+            }); 
+
+            const jsonString = JSON.stringify(data, null, 2); 
+            const blob = new Blob([jsonString], { type: 'application/json' }); 
+            const url = URL.createObjectURL(blob); 
+            const a = document.createElement('a'); 
+            a.href = url; 
+            const fileName = (data.thongTinChung.bai || 'bai_tap').replace(/[^a-z0-9]/gi, '_').toLowerCase(); 
+            a.download = `${fileName}.json`; 
+            document.body.appendChild(a); 
+            a.click(); 
+            document.body.removeChild(a); 
+            URL.revokeObjectURL(url); 
+        }
+        function copyToClipboard() { const content = document.getElementById('output-content').textContent; navigator.clipboard.writeText(content).then(() => { const button = document.querySelector('.copy-button'); const originalText = button.textContent; button.textContent = '✅ Đã sao chép!'; button.style.background = '#28a745'; setTimeout(() => { button.textContent = originalText; button.style.background = '#17a2b8'; }, 2000); }); }
+        
+        // --- Chức năng Modal ---
+        function openBulkAddModal() { document.getElementById('bulk-add-modal').style.display = 'block'; }
+        function closeBulkAddModal() { document.getElementById('bulk-add-modal').style.display = 'none'; }
+        
+        function processBulkQuestions() {
+            const existingQuestionMap = new Map();
+            document.querySelectorAll('.question-container').forEach(q => {
+                const criteriaSelect = q.querySelector('select[name="criteria"]');
+                if (criteriaSelect && criteriaSelect.value) {
+                    existingQuestionMap.set(criteriaSelect.value, q);
+                }
+            });
+            
+            let rawText = document.getElementById('bulk-textarea').value;
+            const answerMap = new Map();
+            const answerKeyMarker = 'ANSWER KEYS';
+            const answerKeyIndex = rawText.toUpperCase().indexOf(answerKeyMarker);
+            if (answerKeyIndex !== -1) {
+                const answerKeyText = rawText.substring(answerKeyIndex + answerKeyMarker.length);
+                const answerLines = answerKeyText.split('\n');
+                answerLines.forEach(line => {
+                    const parts = line.match(/^\s*([0-9.]+)\.\s*(.*)/);
+                    if (parts) {
+                        let cleanAnswer = parts[2].trim().replace(/^\*?[A-Da-d][.)]\s*/, '').trim();
+                        answerMap.set(parts[1], cleanAnswer);
+                    }
+                });
+                rawText = rawText.substring(0, answerKeyIndex);
+            }
+
+            const questionBlocks = rawText.split(/\n\s*\n/);
+            let successCount = 0;
+            let updateCount = 0;
+            
+            questionBlocks.forEach(block => {
+                const trimmedBlock = block.trim();
+                if (!trimmedBlock) return;
+                const lines = trimmedBlock.split('\n');
+                let headerLine = lines[0];
+                let options = lines.slice(1);
+                const headerRegex = /^Câu\s+(?:([0-9.]+)\s+)?\((NB|TH|VD|VDC)\):\s*(.*)/;
+                let match = headerLine.match(headerRegex);
+                let criteria = "", level = "", content = "";
+                
+                if (match) {
+                    criteria = match[1] || "";
+                    level = match[2];
+                    content = match[3];
+                } else {
+                    content = headerLine;
+                }
+                
+                const questionToUpdate = criteria ? existingQuestionMap.get(criteria) : null;
+
+                if (questionToUpdate) {
+                    updateCount++;
+                    populateQuestionForm(questionToUpdate, {criteria, level, content, options, answerMap});
+                } else {
+                    successCount++;
+                    const firstQuestion = document.getElementById('mc-question-1');
+                    if(firstQuestion && mcQuestionCount === 1 && successCount === 1) {
+                        const firstTa = firstQuestion.querySelector('textarea[name="question-content"]');
+                        if (firstTa.value.trim() === '') {
+                             firstQuestion.remove();
+                             mcQuestionCount = 0;
+                        }
+                    }
+                    addMultipleChoiceQuestion(); 
+                    const newQuestionDiv = document.getElementById(`mc-question-${mcQuestionCount}`);
+                    populateQuestionForm(newQuestionDiv, {criteria, level, content, options, answerMap});
+                }
+            });
+
+            closeBulkAddModal();
+            updateQuestionSummary();
+            updateAllCriteria();
+            alert(`Hoàn tất!\n- Đã thêm mới: ${successCount} câu hỏi.\n- Đã cập nhật: ${updateCount} câu hỏi.`);
+        }
+
+        function populateQuestionForm(questionDiv, data) {
+            const { criteria, level, content, options, answerMap } = data;
+            const isFillInTheBlank = /_{3,}|\.{3,}/.test(content) || (options.length === 0 && answerMap.has(criteria));
+            const correctOptionCount = options.filter(line => line.trim().startsWith('*')).length;
+            if(level) questionDiv.querySelector('select[name="cognitive-level"]').value = level;
+            updateCriteriaOptions(questionDiv); 
+            if(criteria) questionDiv.querySelector('select[name="criteria"]').value = criteria;
+            questionDiv.querySelector('textarea[name="question-content"]').value = content;
+            const questionTypeSelect = questionDiv.querySelector('select[name="question-type"]');
+            if (isFillInTheBlank) {
+                questionTypeSelect.value = 'fill-blank';
+                if (answerMap.has(criteria)) {
+                    questionDiv.querySelector('input[name="answer"]').value = answerMap.get(criteria);
+                }
+            } else if (correctOptionCount > 1) {
+                questionTypeSelect.value = 'multiple-answer';
+            } else {
+                questionTypeSelect.value = 'multiple-choice';
+            }
+            questionTypeSelect.dispatchEvent(new Event('change'));
+            const optionInputs = questionDiv.querySelectorAll('.option-text');
+            const optionCheckboxes = questionDiv.querySelectorAll('.correct-checkbox');
+            optionInputs.forEach(i => i.value = '');
+            optionCheckboxes.forEach(c => c.checked = false);
+            options.forEach((line, index) => {
+                if (index < optionInputs.length) {
+                    const isCorrect = line.trim().startsWith('*');
+                    let cleanText = line.trim();
+                    if (isCorrect) cleanText = cleanText.substring(1).trim();
+                    cleanText = cleanText.replace(/^[A-Da-d][.)]\s*/, '').trim();
+                    optionInputs[index].value = cleanText;
+                    optionCheckboxes[index].checked = isCorrect;
+                }
+            });
+        }
+
+        // --- CHỨC NĂNG NHẬP JSON ---
+        function handleJsonImport(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    populateFormFromJson(data);
+                    alert('Đã nhập thành công dữ liệu từ file JSON!');
+                } catch (error) {
+                    alert('Lỗi: File JSON không hợp lệ hoặc có cấu trúc sai.\n' + error);
+                } finally {
+                    event.target.value = null;
+                }
+            };
+            reader.onerror = function() {
+                alert('Đã xảy ra lỗi khi đọc file.');
+            };
+            reader.readAsText(file);
+        }
+
+        function populateFormFromJson(data) {
+            if (!data.thongTinChung || !data.tracNghiem || !data.tuLuan) {
+                throw new Error("Cấu trúc file JSON không đúng.");
+            }
+
+            // Xóa hết câu hỏi hiện tại
+            document.getElementById('multiple-choice-questions').innerHTML = '';
+            document.getElementById('essay-questions').innerHTML = '';
+            mcQuestionCount = 0;
+            essayQuestionCount = 0;
+
+            // Điền thông tin chung
+            const khoiSelect = document.getElementById('khoi');
+            khoiSelect.value = data.thongTinChung.khoi;
+            khoiSelect.dispatchEvent(new Event('change')); 
+
+            setTimeout(() => {
+                const baiSelect = document.getElementById('bai');
+                baiSelect.value = data.thongTinChung.bai;
+                baiSelect.dispatchEvent(new Event('change'));
+
+                data.tracNghiem.forEach(qData => {
+                    addMultipleChoiceQuestion();
+                    const newDiv = document.getElementById(`mc-question-${mcQuestionCount}`);
+                     const popData = {
+                        criteria: qData.tieuChi,
+                        level: qData.mucDo,
+                        content: qData.noiDung,
+                        options: qData.luaChon.map(opt => `${opt.correct ? '*' : ''}${opt.text}`),
+                        answerMap: new Map([[qData.tieuChi, qData.dapAn]])
+                    };
+                    populateQuestionForm(newDiv, popData);
+                });
+
+                data.tuLuan.forEach(qData => {
+                    addEssayQuestion();
+                    const newDiv = document.getElementById(`essay-question-${essayQuestionCount}`);
+                    newDiv.querySelector('select[name="cognitive-level"]').value = qData.mucDo;
+                    updateCriteriaOptions(newDiv);
+                    newDiv.querySelector('select[name="criteria"]').value = qData.tieuChi;
+                    newDiv.querySelector('select[name="essay-type"]').value = qData.loai;
+                    newDiv.querySelector('textarea[name="requirements"]').value = qData.noiDung;
+                });
+
+                updateQuestionSummary();
+            }, 100); 
+        }
+
+        // --- KHỞI TẠO BAN ĐẦU ---
+        window.onload = function() {
+            addMultipleChoiceQuestion();
+            updateQuestionSummary();
+            document.getElementById('json-import-input').addEventListener('change', handleJsonImport, false);
+            const modal = document.getElementById('bulk-add-modal');
+            window.onclick = function(event) {
+                if (event.target == modal) {
+                    closeBulkAddModal();
+                }
+            }
+        };
+    </script>
+</body>
+</html>
