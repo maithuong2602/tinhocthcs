@@ -373,7 +373,7 @@ ANSWER KEYS
             } 
             document.querySelectorAll('.question-container').forEach(question => { 
                 const level = question.querySelector('select[name="cognitive-level"]').value, 
-                    criterion = question.querySelector('select[name="criteria"]').value; 
+                      criterion = question.querySelector('select[name="criteria"]').value; 
                 if (criterion) { 
                     const key = `B${baiNumber}-${level}-${criterion}`; 
                     summary[key] = (summary[key] || 0) + 1; 
@@ -615,8 +615,8 @@ ANSWER KEYS
                 } else {
                     questionNumber = `tn-${index + 1}`;
                 }
-
-                const questionData = { soCau: questionNumber, tieuChi: criteria, mucDo: q.querySelector('select[name="cognitive-level"]').value, loai: q.querySelector('select[name="question-type"]').value, noiDung: q.querySelector('textarea[name="question-content"]').value, luaChon: [], dapAn: null }; 
+                const originalQuestionNumber = q.dataset.originalNumber || null;
+                const questionData = { soCau: questionNumber, tieuChi: criteria, mucDo: q.querySelector('select[name="cognitive-level"]').value, loai: q.querySelector('select[name="question-type"]').value, noiDung: q.querySelector('textarea[name="question-content"]').value, luaChon: [], dapAn: null, originalQuestionNumber: originalQuestionNumber }; 
                 if (questionData.loai === 'fill-blank') { 
                     questionData.dapAn = q.querySelector('input[name="answer"]').value; 
                 } else { 
@@ -662,22 +662,22 @@ ANSWER KEYS
         
         function processBulkQuestions() {
             const existingQuestionMap = new Map();
-            document.querySelectorAll('.question-container').forEach(q => {
-                const criteriaSelect = q.querySelector('select[name="criteria"]');
-                if (criteriaSelect && criteriaSelect.value) {
-                    existingQuestionMap.set(criteriaSelect.value, q);
+            document.querySelectorAll('#multiple-choice-questions .question-container[data-original-number]').forEach(qDiv => {
+                if (qDiv.dataset.originalNumber) {
+                    existingQuestionMap.set(qDiv.dataset.originalNumber, qDiv);
                 }
             });
-            
+
             let rawText = document.getElementById('bulk-textarea').value;
             const answerMap = new Map();
             const answerKeyMarker = 'ANSWER KEYS';
             const answerKeyIndex = rawText.toUpperCase().indexOf(answerKeyMarker);
+
             if (answerKeyIndex !== -1) {
                 const answerKeyText = rawText.substring(answerKeyIndex + answerKeyMarker.length);
                 const answerLines = answerKeyText.split('\n');
                 answerLines.forEach(line => {
-                    const parts = line.match(/^\s*([0-9.]+)\.\s*(.*)/);
+                    const parts = line.match(/^\s*([0-9]+\.[0-9]+(?:\.[0-9]+)?)\s*[:.]\s*(.*)/);
                     if (parts) {
                         let cleanAnswer = parts[2].trim().replace(/^\*?[A-Da-d][.)]\s*/, '').trim();
                         answerMap.set(parts[1], cleanAnswer);
@@ -687,67 +687,104 @@ ANSWER KEYS
             }
 
             const questionBlocks = rawText.split(/\n\s*\n/);
-            let successCount = 0;
+            let addCount = 0;
             let updateCount = 0;
+            const parsingErrors = [];
             
             questionBlocks.forEach(block => {
                 const trimmedBlock = block.trim();
                 if (!trimmedBlock) return;
+
                 const lines = trimmedBlock.split('\n');
                 let headerLine = lines[0];
                 let options = lines.slice(1);
-                const headerRegex = /^Câu\s+(?:([0-9.]+)\s+)?\((NB|TH|VD|VDC)\):\s*(.*)/;
-                let match = headerLine.match(headerRegex);
-                let criteria = "", level = "", content = "";
-                
+                let criteria = "", level = "", content = "", originalQuestionNumber = "";
+
+                // Regex to capture number (e.g., 2.1, 2.2.1), level (e.g., TH), and content
+                const headerRegex = /^(?:Câu\s*)?([0-9]+\.[0-9]+(?:\.[0-9]+)?)\s*\((NB|TH|VD|VDC)\)[:.]?\s*(.*)/;
+                const match = headerLine.match(headerRegex);
+
                 if (match) {
-                    criteria = match[1] || "";
-                    level = match[2];
-                    content = match[3];
+                    originalQuestionNumber = match[1]; // e.g., "2.1" or "2.2.1"
+                    level = match[2];                  // e.g., "TH"
+                    content = match[3].trim();         // The actual question text
+
+                    // The criterion is derived from the first two parts of the number, e.g., "2.1" from "2.1.1"
+                    const numberParts = originalQuestionNumber.split('.');
+                    if (numberParts.length >= 2) {
+                        criteria = `${numberParts[0]}.${numberParts[1]}`;
+                    } else {
+                        parsingErrors.push(`Số hiệu không hợp lệ: ${headerLine}`);
+                        return; // Skip this block
+                    }
+
                 } else {
-                    content = headerLine;
+                    parsingErrors.push(`Sai định dạng: ${headerLine}`);
+                    return; // Skip this block if it doesn't match "Câu 2.1 (TH): ..."
                 }
                 
-                const questionToUpdate = criteria ? existingQuestionMap.get(criteria) : null;
+                const questionToUpdate = originalQuestionNumber ? existingQuestionMap.get(originalQuestionNumber) : null;
 
                 if (questionToUpdate) {
+                    populateQuestionForm(questionToUpdate, {criteria, level, content, options, answerMap, originalQuestionNumber});
                     updateCount++;
-                    populateQuestionForm(questionToUpdate, {criteria, level, content, options, answerMap});
+                    existingQuestionMap.delete(originalQuestionNumber);
                 } else {
-                    successCount++;
+                    addCount++;
                     const firstQuestion = document.getElementById('mc-question-1');
-                    if(firstQuestion && mcQuestionCount === 1 && successCount === 1) {
-                        const firstTa = firstQuestion.querySelector('textarea[name="question-content"]');
-                        if (firstTa.value.trim() === '') {
-                             firstQuestion.remove();
-                             mcQuestionCount = 0;
-                        }
+                    if (firstQuestion && mcQuestionCount === 1 && addCount === 1 && firstQuestion.querySelector('textarea[name="question-content"]').value.trim() === '') {
+                        firstQuestion.remove();
+                        mcQuestionCount = 0;
                     }
+
                     addMultipleChoiceQuestion(); 
                     const newQuestionDiv = document.getElementById(`mc-question-${mcQuestionCount}`);
-                    populateQuestionForm(newQuestionDiv, {criteria, level, content, options, answerMap});
+                    populateQuestionForm(newQuestionDiv, {criteria, level, content, options, answerMap, originalQuestionNumber});
                 }
             });
 
             closeBulkAddModal();
-            updateQuestionSummary();
-            updateAllCriteria();
-            alert(`Hoàn tất!\n- Đã thêm mới: ${successCount} câu hỏi.\n- Đã cập nhật: ${updateCount} câu hỏi.`);
+            updateQuestionSummary(); // updateAllCriteria() không cần thiết và đang reset lại lựa chọn.
+            
+            let alertMessage = `Hoàn tất!\n- Đã thêm mới: ${addCount} câu hỏi.\n- Đã cập nhật: ${updateCount} câu hỏi.`;
+            if (parsingErrors.length > 0) {
+                alertMessage += `\n\nLưu ý: ${parsingErrors.length} câu hỏi sau không thể xử lý do sai định dạng (cần có dạng 'Câu 2.1 (TH):...'):\n- ${parsingErrors.join('\n- ')}`;
+            }
+            alert(alertMessage);
         }
 
         function populateQuestionForm(questionDiv, data) {
-            const { criteria, level, content, options, answerMap } = data;
-            const isFillInTheBlank = /_{3,}|\.{3,}/.test(content) || (options.length === 0 && answerMap.has(criteria));
+            const { criteria, level, content, options, answerMap, originalQuestionNumber } = data;
+            
+            if (originalQuestionNumber) {
+                questionDiv.dataset.originalNumber = originalQuestionNumber;
+            }
+
+            const isFillInTheBlank = /_{3,}|\.{3,}/.test(content) || (options.length === 0 && answerMap.has(originalQuestionNumber));
             const correctOptionCount = options.filter(line => line.trim().startsWith('*')).length;
+            
+            // Set level first, which is needed to populate the correct criteria
             if(level) questionDiv.querySelector('select[name="cognitive-level"]').value = level;
+            
+            // Repopulate the criteria dropdown based on the new level
             updateCriteriaOptions(questionDiv); 
-            if(criteria) questionDiv.querySelector('select[name="criteria"]').value = criteria;
+            
+            // Set the criteria value. A small timeout helps prevent browser timing issues.
+            if(criteria) {
+                setTimeout(() => {
+                    const criteriaSelect = questionDiv.querySelector('select[name="criteria"]');
+                    if (criteriaSelect) {
+                         criteriaSelect.value = criteria;
+                    }
+                }, 0);
+            }
+
             questionDiv.querySelector('textarea[name="question-content"]').value = content;
             const questionTypeSelect = questionDiv.querySelector('select[name="question-type"]');
             if (isFillInTheBlank) {
                 questionTypeSelect.value = 'fill-blank';
-                if (answerMap.has(criteria)) {
-                    questionDiv.querySelector('input[name="answer"]').value = answerMap.get(criteria);
+                if (answerMap.has(originalQuestionNumber)) {
+                    questionDiv.querySelector('input[name="answer"]').value = answerMap.get(originalQuestionNumber);
                 }
             } else if (correctOptionCount > 1) {
                 questionTypeSelect.value = 'multiple-answer';
@@ -823,7 +860,8 @@ ANSWER KEYS
                         level: qData.mucDo,
                         content: qData.noiDung,
                         options: qData.luaChon.map(opt => `${opt.correct ? '*' : ''}${opt.text}`),
-                        answerMap: new Map([[qData.tieuChi, qData.dapAn]])
+                        answerMap: new Map([[qData.originalQuestionNumber || qData.tieuChi, qData.dapAn]]),
+                        originalQuestionNumber: qData.originalQuestionNumber
                     };
                     populateQuestionForm(newDiv, popData);
                 });
@@ -857,3 +895,10 @@ ANSWER KEYS
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
