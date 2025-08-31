@@ -763,21 +763,25 @@ ANSWER KEYS
             const isFillInTheBlank = /_{3,}|\.{3,}/.test(content) || (options.length === 0 && answerMap.has(originalQuestionNumber));
             const correctOptionCount = options.filter(line => line.trim().startsWith('*')).length;
             
-            // Set level first, which is needed to populate the correct criteria
-            if(level) questionDiv.querySelector('select[name="cognitive-level"]').value = level;
+            const levelSelect = questionDiv.querySelector('select[name="cognitive-level"]');
             
-            // Repopulate the criteria dropdown based on the new level
-            updateCriteriaOptions(questionDiv); 
-            
-            // Set the criteria value. A small timeout helps prevent browser timing issues.
-            if(criteria) {
-                setTimeout(() => {
-                    const criteriaSelect = questionDiv.querySelector('select[name="criteria"]');
-                    if (criteriaSelect) {
-                         criteriaSelect.value = criteria;
-                    }
-                }, 0);
+            // Set level and trigger its onchange handler to populate the criteria list
+            if (level) {
+                levelSelect.value = level;
+                levelSelect.dispatchEvent(new Event('change')); // This calls updateCriteriaOptions via the onchange attribute
+            } else {
+                 // Still need to populate criteria even if level is default
+                 updateCriteriaOptions(questionDiv);
             }
+            
+            // Now, with the correct options in place, set the criteria value
+            if (criteria) {
+                const criteriaSelect = questionDiv.querySelector('select[name="criteria"]');
+                if (criteriaSelect) {
+                     criteriaSelect.value = criteria;
+                }
+            }
+
 
             questionDiv.querySelector('textarea[name="question-content"]').value = content;
             const questionTypeSelect = questionDiv.querySelector('select[name="question-type"]');
@@ -895,10 +899,4 @@ ANSWER KEYS
     </script>
 </body>
 </html>
-
-
-
-
-
-
 
