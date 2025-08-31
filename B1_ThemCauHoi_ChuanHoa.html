@@ -7,11 +7,21 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
         .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; padding: 30px; text-align: center; }
         .header h1 { font-size: 2.2em; margin-bottom: 10px; font-weight: 600; }
         .header p { font-size: 1.1em; opacity: 0.9; }
-        .form-container { padding: 40px; }
+        
+        .main-content-wrapper {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            padding: 40px;
+            align-items: flex-start;
+        }
+
+        .form-container { padding: 0; }
+
         .section { margin-bottom: 40px; border: 2px solid #e8f4fd; border-radius: 12px; padding: 25px; background: #fafcff; }
         .section-title { font-size: 1.4em; color: #2c5aa0; margin-bottom: 20px; font-weight: 600; display: flex; align-items: center; }
         .section-title::before { content: "📋"; margin-right: 10px; font-size: 1.2em; }
@@ -46,6 +56,26 @@
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
         .error-highlight { border-color: #ff4757 !important; box-shadow: 0 0 0 3px rgba(255, 71, 87, 0.2) !important; }
+        
+        /* Bảng đặc tả */
+        .dac-ta-panel-wrapper { position: relative; }
+        .dac-ta-panel {
+            position: sticky;
+            top: 20px;
+            background: #fafcff;
+            border-radius: 12px;
+            border: 2px solid #e8f4fd;
+            padding: 20px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+        .dac-ta-title { font-size: 1.4em; color: #2c5aa0; margin-bottom: 20px; font-weight: 600;}
+        #dac-ta-panel-content p { color: #666; font-style: italic; }
+        .dac-ta-level { margin-bottom: 15px; }
+        .dac-ta-level h4 { font-size: 1.1em; color: #1a73e8; margin-bottom: 8px; font-weight: 600; padding-bottom: 5px; border-bottom: 1px solid #e1e8ed; }
+        .dac-ta-list { list-style-position: inside; padding-left: 5px; }
+        .dac-ta-list li { font-size: 14px; color: #333; margin-bottom: 8px; line-height: 1.5; }
+
         /* Modal Styles */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
         .modal-content { background-color: #fefefe; margin: 10% auto; padding: 30px; border: 1px solid #888; width: 80%; max-width: 700px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
@@ -56,9 +86,12 @@
         #bulk-textarea { width: 100%; min-height: 300px; font-family: 'Courier New', monospace; font-size: 14px; }
         #bulk-instructions { font-size: 14px; color: #666; background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
 
+        @media (max-width: 992px) {
+            .main-content-wrapper { grid-template-columns: 1fr; padding: 20px; }
+        }
+
         @media (max-width: 768px) {
             .grid-2, .grid-3, .button-group { grid-template-columns: 1fr; }
-            .form-container { padding: 20px; }
             .header { padding: 20px; }
             .header h1 { font-size: 1.8em; }
         }
@@ -71,44 +104,55 @@
             <p>Hệ thống tạo file Word hoàn chỉnh với mã nhận thức và tiêu chí cụ thể</p>
         </div>
 
-        <div class="form-container">
-            <div class="section">
-                <div class="section-title">PHẦN 1: THÔNG TIN CHUNG</div>
-                <div class="grid-2">
-                    <div class="form-group"><label for="khoi">Khối:</label><select id="khoi" onchange="updateBaiOptions()"><option value="">-- Chọn khối --</option><option value="6">Khối 6</option><option value="7">Khối 7</option><option value="8">Khối 8</option><option value="9">Khối 9</option></select></div>
-                    <div class="form-group"><label for="bai">Bài (sẽ là tiêu đề chính):</label><select id="bai" onchange="updateAllCriteria(); updateQuestionSummary();" disabled><option value="">-- Vui lòng chọn khối trước --</option></select></div>
+        <div class="main-content-wrapper">
+            <div class="form-container">
+                <div class="section">
+                    <div class="section-title">PHẦN 1: THÔNG TIN CHUNG</div>
+                    <div class="grid-2">
+                        <div class="form-group"><label for="khoi">Khối:</label><select id="khoi" onchange="updateBaiOptions()"><option value="">-- Chọn khối --</option><option value="6">Khối 6</option><option value="7">Khối 7</option><option value="8">Khối 8</option><option value="9">Khối 9</option></select></div>
+                        <div class="form-group"><label for="bai">Bài (sẽ là tiêu đề chính):</label><select id="bai" onchange="updateAllCriteria(); updateQuestionSummary(); updateDacTaPanel();" disabled><option value="">-- Vui lòng chọn khối trước --</option></select></div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">PHẦN 1. Trắc nghiệm</div>
+                    <div id="multiple-choice-questions"></div>
+                    <button class="add-button" onclick="addMultipleChoiceQuestion()">➕ Thêm câu hỏi</button>
+                    <button class="add-button" style="background: linear-gradient(135deg, #007bff 0%, #00d4ff 100%);" onclick="openBulkAddModal()">➕ Thêm hàng loạt (Trắc nghiệm)</button>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">PHẦN 2. Tự luận</div>
+                    <div id="essay-questions"></div>
+                    <button class="add-button" onclick="addEssayQuestion()">➕ Thêm câu hỏi</button>
+                </div>
+                
+                <div class="section">
+                    <div class="section-title">Thống kê số câu hỏi</div>
+                    <div id="question-summary">Chưa có câu hỏi nào được định nghĩa đầy đủ.</div>
+                </div>
+
+                <div class="button-group">
+                    <button class="generate-button" onclick="generateDocument()">🚀 Tạo Tài Liệu</button>
+                    <button class="json-button" onclick="exportToJson()">📦 Xuất JSON</button>
+                    <label for="json-import-input" class="json-import-label">📂 Nhập JSON</label>
+                    <input type="file" id="json-import-input" accept=".json" style="display: none;">
+                </div>
+
+                <div class="output-container" id="output-container">
+                    <h3 style="margin-bottom: 15px; color: #2c5aa0;">📄 Nội dung tài liệu được tạo:</h3>
+                    <div class="output-content" id="output-content"></div>
+                    <button class="copy-button" onclick="copyToClipboard()">📋 Sao chép nội dung</button>
                 </div>
             </div>
 
-            <div class="section">
-                <div class="section-title">PHẦN 1. Trắc nghiệm</div>
-                <div id="multiple-choice-questions"></div>
-                <button class="add-button" onclick="addMultipleChoiceQuestion()">➕ Thêm câu hỏi</button>
-                <button class="add-button" style="background: linear-gradient(135deg, #007bff 0%, #00d4ff 100%);" onclick="openBulkAddModal()">➕ Thêm hàng loạt (Trắc nghiệm)</button>
-            </div>
-
-            <div class="section">
-                <div class="section-title">PHẦN 2. Tự luận</div>
-                <div id="essay-questions"></div>
-                <button class="add-button" onclick="addEssayQuestion()">➕ Thêm câu hỏi</button>
-            </div>
-            
-            <div class="section">
-                <div class="section-title">Thống kê số câu hỏi</div>
-                <div id="question-summary">Chưa có câu hỏi nào được định nghĩa đầy đủ.</div>
-            </div>
-
-            <div class="button-group">
-                <button class="generate-button" onclick="generateDocument()">🚀 Tạo Tài Liệu</button>
-                <button class="json-button" onclick="exportToJson()">📦 Xuất JSON</button>
-                <label for="json-import-input" class="json-import-label">📂 Nhập JSON</label>
-                <input type="file" id="json-import-input" accept=".json" style="display: none;">
-            </div>
-
-            <div class="output-container" id="output-container">
-                <h3 style="margin-bottom: 15px; color: #2c5aa0;">📄 Nội dung tài liệu được tạo:</h3>
-                <div class="output-content" id="output-content"></div>
-                <button class="copy-button" onclick="copyToClipboard()">📋 Sao chép nội dung</button>
+            <div class="dac-ta-panel-wrapper">
+                 <div id="dac-ta-panel" class="dac-ta-panel">
+                    <h3 class="dac-ta-title">📖 Yêu Cầu Cần Đạt</h3>
+                    <div id="dac-ta-panel-content">
+                        <p>Vui lòng chọn khối và bài để xem yêu cầu cần đạt.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -318,6 +362,7 @@ ANSWER KEYS
             } 
             updateAllCriteria(); 
             updateQuestionSummary(); 
+            updateDacTaPanel();
         }
 
         function updateCriteriaOptions(questionContainer) { 
@@ -359,6 +404,56 @@ ANSWER KEYS
             document.querySelectorAll('.question-container').forEach(qc => updateCriteriaOptions(qc)); 
             updateQuestionSummary(); 
         }
+
+        function updateDacTaPanel() {
+            const panel = document.getElementById('dac-ta-panel-content');
+            if (!panel) return;
+
+            const khoi = document.getElementById('khoi').value;
+            const bai = document.getElementById('bai').value;
+
+            panel.innerHTML = ''; // Clear previous content
+
+            if (!khoi || !bai) {
+                panel.innerHTML = '<p>Vui lòng chọn khối và bài để xem yêu cầu cần đạt.</p>';
+                return;
+            }
+
+            const baiData = criteriaData[khoi]?.[bai];
+
+            if (!baiData || Object.keys(baiData).length === 0) {
+                panel.innerHTML = '<p>Không có dữ liệu đặc tả cho bài này.</p>';
+                return;
+            }
+
+            let htmlContent = '';
+            const levelOrder = ['NB', 'TH', 'VD', 'VDC'];
+            const levelNames = {
+                'NB': 'Nhận biết',
+                'TH': 'Thông hiểu',
+                'VD': 'Vận dụng',
+                'VDC': 'Vận dụng cao'
+            };
+
+            levelOrder.forEach(level => {
+                if (baiData[level]) {
+                    htmlContent += `<div class="dac-ta-level"><h4>${levelNames[level]}</h4>`;
+                    htmlContent += '<ul class="dac-ta-list">';
+                    baiData[level].forEach(criterion => {
+                        htmlContent += `<li>${criterion.replace(/^\d+\.\d+\s/, '')}</li>`;
+                    });
+                    htmlContent += '</ul></div>';
+                }
+            });
+            
+            if(htmlContent === ''){
+                 panel.innerHTML = '<p>Không có dữ liệu đặc tả cho bài này.</p>';
+            } else {
+                panel.innerHTML = htmlContent;
+            }
+        }
+
+
         function updateQuestionSummary() { 
             const summary = {}; 
             const baiSelect = document.getElementById('bai'); 
@@ -888,6 +983,7 @@ ANSWER KEYS
         window.onload = function() {
             addMultipleChoiceQuestion();
             updateQuestionSummary();
+            updateDacTaPanel();
             document.getElementById('json-import-input').addEventListener('change', handleJsonImport, false);
             const modal = document.getElementById('bulk-add-modal');
             window.onclick = function(event) {
@@ -899,4 +995,8 @@ ANSWER KEYS
     </script>
 </body>
 </html>
+
+
+"
+
 
