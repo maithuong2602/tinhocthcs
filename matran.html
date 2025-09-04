@@ -1,0 +1,1752 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ứng dụng Quản lý Ma trận Đề kiểm tra</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+        .matrix-table th, .matrix-table td {
+            border: 1px solid #e2e8f0;
+            padding: 8px 12px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .matrix-table .text-left {
+            text-align: left;
+        }
+        .matrix-table th {
+            background-color: #f8fafc;
+            vertical-align: middle;
+        }
+        /* Style for drag-over effect */
+        .dragging-over {
+            background-color: #e0e7ff !important; /* indigo-100 */
+            border: 2px dashed #6366f1 !important; /* indigo-500 */
+        }
+        /* Style for the item being dragged */
+        .is-dragging {
+            opacity: 0.5;
+        }
+        /* Disabled checkbox style */
+        input[type="checkbox"]:disabled + label {
+            cursor: not-allowed;
+            color: #94a3b8; /* slate-400 */
+        }
+        .editable-cell {
+            cursor: pointer;
+            min-width: 50px;
+        }
+        .editable-cell:hover {
+            background-color: #f0f9ff; /* sky-50 */
+        }
+        .editable-cell input {
+            width: 100%;
+            text-align: center;
+            border: 1px solid #38bdf8; /* sky-400 */
+            border-radius: 4px;
+            padding: 4px;
+            background-color: white;
+            outline: none;
+        }
+        /* New styles for hover delete button */
+        .stt-cell {
+            position: relative;
+        }
+        .stt-cell .stt-number {
+            transition: opacity 0.15s ease-in-out;
+        }
+        .stt-cell .delete-row-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.15s ease-in-out, visibility 0.15s;
+        }
+        .matrix-table tbody tr:hover .stt-cell .stt-number {
+            opacity: 0;
+        }
+        .matrix-table tbody tr:hover .stt-cell .delete-row-btn {
+            opacity: 1;
+            visibility: visible;
+        }
+        /* Bỏ khối @media print cũ vì sẽ dùng cách tiếp cận mới */
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-7xl">
+        <header class="flex flex-wrap justify-between items-center gap-4 mb-6">
+            <h1 class="text-2xl font-bold text-slate-900">Trình quản lý tệp</h1>
+            <div class="flex items-center gap-2 sm:gap-3">
+                <button id="paste-btn" class="hidden bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all duration-200 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                    Dán
+                </button>
+                <button id="upload-btn" class="hidden bg-sky-500 hover:bg-sky-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all duration-200 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Tải lên JSON
+                </button>
+                <input type="file" id="file-input" class="hidden" accept=".json" multiple>
+            </div>
+        </header>
+        
+        <!-- Action Toolbar (hidden by default) -->
+        <div id="action-toolbar" class="hidden flex flex-wrap justify-between items-center gap-4 bg-sky-100 p-3 rounded-lg shadow-sm mb-6 border border-sky-200">
+            <span id="selection-count" class="font-semibold text-sky-800"></span>
+            <div class="flex items-center gap-3">
+                <button id="rename-btn" class="flex items-center gap-2 bg-white text-slate-700 font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-slate-50 border border-slate-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Sửa tên
+                </button>
+                <button id="copy-btn" class="flex items-center gap-2 bg-white text-slate-700 font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-slate-50 border border-slate-300 transition-colors">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    Sao chép
+                </button>
+                <button id="delete-btn" class="flex items-center gap-2 bg-red-500 text-white font-semibold py-2 px-4 rounded-lg shadow-sm hover:bg-red-600 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    Xóa
+                </button>
+            </div>
+        </div>
+
+        <!-- Breadcrumbs -->
+        <nav class="bg-white p-3 rounded-lg shadow-sm mb-6">
+            <ol id="breadcrumbs" class="flex items-center text-sm font-medium text-slate-600 space-x-2"></ol>
+        </nav>
+        
+        <!-- Matrix Display Area -->
+        <div id="matrix-container" class="hidden mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-slate-900">Ma trận đặc tả đề kiểm tra</h2>
+                    <button id="print-btn" class="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                        In ra Word
+                    </button>
+                </div>
+                <div id="matrix-content" class="space-y-6 overflow-x-auto">
+                    <!-- Tables will be injected here by JS -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- File & Folder list -->
+        <div id="file-explorer" class="bg-white p-4 sm:p-6 rounded-xl shadow-md min-h-[400px]">
+            <div id="file-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- Items will be injected here by JS -->
+            </div>
+             <div id="empty-folder-message" class="hidden items-center justify-center flex-col text-center py-20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-slate-400 mb-4"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path></svg>
+                <p class="text-slate-500 font-semibold"></p>
+                <p class="text-slate-400 text-sm mt-1"></p>
+                 <button id="create-initial-folder-btn" class="hidden mt-6 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-all duration-200 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                    Tạo loại đề
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal for creating/renaming folder -->
+    <div id="folder-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+            <h3 id="folder-modal-title" class="text-lg font-bold mb-4">Tạo thư mục mới</h3>
+            
+            <!-- New section for root folder creation -->
+            <div id="grade-creator" class="hidden space-y-3">
+                 <div>
+                    <label for="grade-select" class="block text-sm font-medium text-slate-700">Chọn khối lớp</label>
+                    <select id="grade-select" class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                        <option value="" disabled selected>-- Chọn khối --</option>
+                        <option value="Lớp 6">Lớp 6</option>
+                        <option value="Lớp 7">Lớp 7</option>
+                        <option value="Lớp 8">Lớp 8</option>
+                        <option value="Lớp 9">Lớp 9</option>
+                    </select>
+                 </div>
+                 <div>
+                    <label for="grade-desc-input" class="block text-sm font-medium text-slate-700">Tên hoặc mô tả (ví dụ: Giữa kỳ 1)</label>
+                    <input type="text" id="grade-desc-input" placeholder="Giữa kỳ 1" class="mt-1 w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                 </div>
+            </div>
+
+            <!-- Existing inputs -->
+            <select id="folder-name-select" class="hidden w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+                <!-- Populated by JS -->
+            </select>
+            <input type="text" id="folder-name-input" placeholder="Nhập tên" class="w-full border border-slate-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+            
+            <div class="flex justify-end gap-3 mt-5">
+                <button id="cancel-folder-btn" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold py-2 px-4 rounded-lg transition-all duration-200">Hủy</button>
+                <button id="confirm-folder-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200">Tạo</button>
+            </div>
+        </div>
+    </div>
+        
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+            <h3 id="confirm-modal-title" class="text-lg font-bold mb-2">Xác nhận xóa</h3>
+            <p id="confirm-modal-text" class="text-slate-600 mb-6">Bạn có chắc chắn muốn thực hiện hành động này?</p>
+            <div class="flex justify-end gap-3">
+                <button id="cancel-confirm-btn" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold py-2 px-4 rounded-lg transition-all duration-200">Hủy</button>
+                <button id="confirm-action-btn" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200">Xóa</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-red-500 text-white py-2 px-5 rounded-lg shadow-lg opacity-0 transform translate-y-[20px] transition-all duration-300 z-50">
+        <p id="toast-message"></p>
+    </div>
+
+    <!-- Tooltip for question counts -->
+    <div id="question-tooltip" class="hidden absolute z-50 bg-yellow-100 border border-yellow-300 text-yellow-800 text-sm px-3 py-2 rounded-md shadow-lg">
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const fileExplorer = document.getElementById('file-explorer');
+            const fileList = document.getElementById('file-list');
+            const emptyFolderMessage = document.getElementById('empty-folder-message');
+            const breadcrumbs = document.getElementById('breadcrumbs');
+            const matrixContainer = document.getElementById('matrix-container');
+            const matrixContent = document.getElementById('matrix-content');
+            const questionTooltip = document.getElementById('question-tooltip');
+
+            // --- Modal elements ---
+            const modal = document.getElementById('folder-modal');
+            const folderModalTitle = document.getElementById('folder-modal-title');
+            const createInitialFolderBtn = document.getElementById('create-initial-folder-btn');
+            const cancelFolderBtn = document.getElementById('cancel-folder-btn');
+            const confirmFolderBtn = document.getElementById('confirm-folder-btn');
+            const folderNameInput = document.getElementById('folder-name-input');
+            const folderNameSelect = document.getElementById('folder-name-select');
+
+            const confirmModal = document.getElementById('confirm-modal');
+            const confirmModalTitle = document.getElementById('confirm-modal-title');
+            const confirmModalText = document.getElementById('confirm-modal-text');
+            const cancelConfirmBtn = document.getElementById('cancel-confirm-btn');
+            const confirmActionBtn = document.getElementById('confirm-action-btn');
+            let confirmCallback = null;
+
+            // --- Toolbar & Upload elements ---
+            const actionToolbar = document.getElementById('action-toolbar');
+            const selectionCountSpan = document.getElementById('selection-count');
+            const renameBtn = document.getElementById('rename-btn');
+            const copyBtn = document.getElementById('copy-btn');
+            const deleteBtn = document.getElementById('delete-btn');
+            const pasteBtn = document.getElementById('paste-btn');
+            const uploadBtn = document.getElementById('upload-btn');
+            const fileInput = document.getElementById('file-input');
+            const printBtn = document.getElementById('print-btn');
+
+            // Toast elements
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            let toastTimeout = null; // Thêm biến để quản lý thời gian hiển thị
+
+            // --- State variables ---
+            let draggedItemInfo = null;
+            let fileSystem = { name: 'Thư mục gốc', type: 'folder', children: [] };
+            let currentPath = [];
+            let selectedItems = [];
+            let folderModalMode = 'create'; // 'create' or 'rename'
+            let itemToRename = null;
+            let clipboard = null;
+
+            // --- Data ---
+            const requirementsData = {
+                "Lớp 6": {
+                    "Chủ đề A. Máy tính và cộng đồng": {
+                        "1. Thông tin và dữ liệu": "Nhận biết\n– Phân biệt được thông tin với vật mang tin\n– Nhận biết được sự khác nhau giữa thông tin và dữ liệu.\n– Nêu được các bước cơ bản trong xử lí thông tin.\nThông hiểu\n– Nêu được ví dụ minh hoạ về mối quan hệ giữa thông tin và dữ liệu.\n– Nêu được ví dụ minh hoạ tầm quan trọng của thông tin.\nVận dụng\n– Giải thích được máy tính và các thiết bị số là công cụ hiệu quả để thu thập, lưu trữ, xử lí và truyền thông tin. Nêu được ví dụ minh hoạ cụ thể.",
+                        "2. Biểu diễn thông tin và lưu trữ dữ liệu trong máy tính": "Nhận biết\n– Biết được bit là đơn vị nhỏ nhất trong lưu trữ thông tin.\n– Nêu được tên và độ lớn (xấp xỉ theo hệ thập phân) của các đơn vị cơ bản đo dung lượng thông tin: Byte, KB, MB, GB, quy đổi được một cách gần đúng giữa các đơn vị đo lường này. Ví dụ: 1KB bằng xấp xỉ 1 ngàn byte, 1 MB xấp xỉ 1 triệu byte, 1 GB xấp xỉ 1 tỉ byte.\nThông hiểu\n– Giải thích được có thể biểu diễn thông tin chỉ với hai kí hiệu 0 và 1.\nVận dụng cao\n– Xác định được khả năng lưu trữ của các thiết bị nhớ thông dụng như đĩa quang, đĩa từ, đĩa cứng, USB, CD, thẻ nhớ, …"
+                    },
+                    "Chủ đề B. Mạng máy tính và Internet": {
+                        "Giới thiệu về mạng máy tính và Internet": "Nhận biết\n– Nêu được khái niệm và lợi ích của mạng máy tính.\n– Nêu được các thành phần chủ yếu của một mạng máy tính (máy tính và các thiết bị kết nối) và tên của một vài thiết bị mạng cơ bản như máy tính, cáp nối, Switch, Access Point,...\n– Nêu được các đặc điểm và ích lợi chính của Internet.\nThông hiểu\n– Nêu được ví dụ cụ thể về trường hợp mạng không dây tiện dụng hơn mạng có dây."
+                    },
+                    "Chủ đề C. Tổ chức lưu trữ, tìm kiếm và trao đổi thông tin": {
+                        "World Wide Web, thư điện tử và công cụ tìm kiếm thông tin": "Nhận biết\n– Trình bày được sơ lược về các khái niệm WWW, website, địa chỉ của website, trình duyệt.\n– Xem và nêu được những thông tin chính trên trang web cho trước.\n– Nêu được công dụng của máy tìm kiếm.\n– Biết cách đăng kí tài khoản thư điện tử.\nThông hiểu\n– Nêu được những ưu, nhược điểm cơ bản của dịch vụ thư điện tử so với các phương thức liên lạc khác.\n– Xác định được từ khoá ứng với một mục đích tìm kiếm cho trước.\nVận dụng cao\n– Tìm kiếm được thông tin trên một số trang web thông dụng như tra từ điển, xem thời tiết, tin thời sự, ... để phục vụ cho nhu cầu học tập và cuộc sống.\n– Thực hiện được một số thao tác cơ bản: tạo tài khoản email, đăng nhập tài khoản email, soạn thư, gửi thư, nhận thư, trả lời thư, chuyển tiếp thư và đăng xuất hộp thư trong một số tình huống thực tiễn."
+                    },
+                    "Chủ đề D. Đạo đức, pháp luật và văn hoá trong môi trường số": {
+                        "Đề phòng một số tác hại khi tham gia Internet": "Nhận biết\n– Nêu được một số tác hại và nguy cơ bị hại khi tham gia Internet.\n– Nêu được một vài cách thông dụng để bảo vệ, chia sẻ thông tin của bản thân và tập thể sao cho an toàn và hợp pháp.\nThông hiểu\n– Nêu và thực hiện được một số biện pháp cơ bản để phòng ngừa tác hại khi tham gia Internet với sự hướng dẫn của giáo viên.\n– Trình bày được tầm quan trọng của sự an toàn và hợp pháp của thông tin cá nhân và tập thể, nêu được ví dụ minh hoạ.\n– Nhận diện được một số thông điệp (chẳng hạn email, yêu cầu kết bạn, lời mời tham gia câu lạc bộ,...) lừa đảo hoặc mang nội dung xấu.\nVận dụng\n– Thực hiện được các thao tác để bảo vệ thông tin và tài khoản cá nhân."
+                    },
+                    "Chủ đề E. Ứng dụng tin học": {
+                        "1. Soạn thảo văn bản cơ bản": "Nhận biết\n– Nhận biết được tác dụng của công cụ căn lề, định dạng, tìm kiếm, thay thế trong phần mềm soạn thảo văn bản.\n– Nêu được các chức năng đặc trưng của những phần mềm soạn thảo văn bản.\nVận dụng\n– Thực hiện được việc định dạng văn bản, trình bày trang văn bản và in.\n– Sử dụng được công cụ tìm kiếm và thay thế của phần mềm soạn thảo.\n– Trình bày được thông tin ở dạng bảng.\nVận dụng cao\n– Soạn thảo được văn bản phục vụ học tập và sinh hoạt hàng ngày.",
+                        "2. Sơ đồ tư duy và phần mềm sơ đồ tư duy": "Thông hiểu\n– Giải thích được lợi ích của sơ đồ tư duy, nêu được nhu cầu sử dụng phần mềm sơ đồ tư duy trong học tập và trao đổi thông tin.\nVận dụng\n– Sắp xếp được một cách logic và trình bày được dưới dạng sơ đồ tư duy các ý tưởng, khái niệm.\nVận dụng cao\n– Sử dụng được phần mềm để tạo sơ đồ tư duy đơn giản phục vụ học tập và trao đổi thông tin."
+                    },
+                    "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính": {
+                        "Khái niệm thuật toán và biểu diễn thuật toán": "Nhận biết\n– Nêu được khái niệm thuật toán.\n– Biết được chương trình là mô tả một thuật toán để máy tính “hiểu” và thực hiện được.\nThông hiểu\n– Nêu được một vài ví dụ minh hoạ về thuật toán.\nVận dụng\n– Mô tả được thuật toán đơn giản có các cấu trúc tuần tự, rẽ nhánh và lặp dưới dạng liệt kê hoặc sơ đồ khối."
+                    }
+                },
+                "Lớp 7": {
+                    "Chủ đề A. Máy tính và cộng đồng": {
+                        "1. Sơ lược về các thành phần của máy tính": "Nhận biết\n– Biết và nhận ra được các thiết bị vào ra trong mô hình thiết bị máy tính, tính đa dạng và hình dạng của các thiết bị. (Chuột, bàn phím, màn hình, loa, màn hình cảm ứng, máy quét, camera,…)\n– Biết được chức năng của một số thiết bị vào ra trong thu thập, lưu trữ, xử lí và truyền thông tin. (Chuột, bàn phím, màn hình, loa, màn hình cảm ứng, máy quét, camera,…)\nThông hiểu\n– Nêu được ví dụ cụ thể về những thao tác không đúng cách sẽ gây ra lỗi cho các thiết bị và hệ thống xử lí thông tin.\nVận dụng\n– Thực hiện đúng các thao tác với các thiết bị thông dụng của máy tính.",
+                        "2. Khái niệm hệ điều hành và phần mềm ứng dụng": "Nhận biết\n– Biết được tệp chương trình cũng là dữ liệu, có thể được lưu trữ trong máy tính.\n– Nêu được tên một số phần mềm ứng dụng đã sử dụng (Phần mềm luyện gõ phím, Word, Paint, …..)\n– Nêu được một số biện pháp để bảo vệ máy tính cá nhân, tài khoản và dữ liệu cá nhận. (Cài mật khẩu máy tính, đăng xuất tài khoản khi hết phiên làm việc, sao lưu dữ liệu, quét virus…)\nThông hiểu\n– Giải thích được chức năng điều khiển của hệ điều hành, qua đó phân biệt được hệ điều hành với phần mềm ứng dụng.\n– Phân biệt được loại tệp thông qua phần mở rộng.\nVận dụng\n– Thao tác thành thạo với tệp và thư mục."
+                    },
+                    "Chủ đề C. Tổ chức lưu trữ, tìm kiếm và trao đổi thông tin": {
+                        "Mạng xã hội và một số kênh trao đổi thông tin thông dụng trên Internet": "Nhận biết\n– Nhận biết một số website là mạng xã hội (Facebook, YouTube, Zalo, Instagram …)\n– Nêu được tên kênh và thông tin trao đổi chính trên kênh đó như Youtube cho phép trao đổi, chia sẻ …về Video; Website nhà trường chứa các thông tin về hoạt động giáo dục của nhà trường, …..)\n– Nêu được một số chức năng cơ bản của mạng xã hội: kết nối, giao lưu, chia sẻ, thảo luận và trao đổi thông tin…\nThông hiểu\n– Nêu được ví dụ cụ thể về hậu quả của việc sử dụng thông tin vào mục đích sai trái.\nVận dụng\n– Sử dụng được một số chức năng cơ bản của một mạng xã hội để giao lưu và chia sẻ thông tin: tạo tài khoản, hồ sơ trực tuyến, kết nối với bạn cùng lớp, chia sẻ tài liệu học tập, tạo nhóm trao đổi …."
+                    },
+                    "Chủ đề D. Đạo đức, pháp luật và văn hoá trong môi trường số": {
+                        "Văn hoá ứng xử qua phương tiện truyền thông số": "Nhận biết\n– Biết được tác hại của bệnh nghiện Internet.\n– Nêu được cách ứng xử hợp lí khi gặp trên mạng hoặc các kênh truyền thông tin số những thông tin có nội dung xấu, thông tin không phù hợp lứa tuổi.\nThông hiểu\n– Nêu được một số ví dụ truy cập không hợp lệ vào các nguồn thông tin và kênh truyền thông tin.\nVận dụng\n– Biết nhờ người lớn giúp đỡ, tư vấn khi cần thiết, chẳng hạn khi bị bắt nạt trên mạng.\n– Lựa chọn được các biện pháp phòng tránh bệnh nghiện Internet.\nVận dụng cao\n– Thực hiện được giao tiếp qua mạng (trực tuyến hay không trực tuyến) theo đúng quy tắc và bằng ngôn ngữ lịch sự, thể hiện ứng xử có văn hoá."
+                    },
+                    "Chủ đề E. Ứng dụng tin học": {
+                        "1. Bảng tính điện tử cơ bản": "Nhận biết\n– Nêu được một số chức năng cơ bản của phần mềm bảng tính.\nThông hiểu\n– Giải thích được việc đưa các công thức vào bảng tính là một cách điều khiển tính toán tự động trên dữ liệu.\nVận dụng\n– Thực hiện được một số thao tác đơn giản với trang tính.\n– Thực hiện được một số phép toán thông dụng, sử dụng được một số hàm đơn giản như: MAX, MIN, SUM, AVERAGE, COUNT, …\n– Sử dụng được công thức và dùng được địa chỉ trong công thức, tạo được bảng tính đơn giản có số liệu tính toán bằng công thức.\nVận dụng cao\n– Sử dụng được bảng tính điện tử để giải quyết một vài công việc cụ thể đơn giản.",
+                        "2. Phần mềm trình chiếu cơ bản": "Nhận biết\n– Nêu được một số chức năng cơ bản của phần mềm trình chiếu.\nVận dụng\n– Sử dụng được các định dạng cho văn bản, ảnh minh hoạ và hiệu ứng một cách hợp lí.\n– Sao chép được dữ liệu phù hợp từ tệp văn bản sang trang trình chiếu.\n– Tạo được một báo cáo có tiêu đề, cấu trúc phân cấp, ảnh minh hoạ, hiệu ứng động."
+                    },
+                    "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính": {
+                        "Một số thuật toán sắp xếp và tìm kiếm cơ bản": "Nhận biết\n– Nêu được ý nghĩa của việc chia một bài toán thành những bài toán nhỏ hơn.\nThông hiểu\n– Giải thích được một vài thuật toán sắp xếp và tìm kiếm cơ bản, bằng các bước thủ công (không cần dùng máy tính).\n– Giải thích được mối liên quan giữa sắp xếp và tìm kiếm, nêu được ví dụ minh hoạ.\nVận dụng\n– Biểu diễn và mô phỏng được hoạt động của thuật toán đó trên một bộ dữ liệu vào có kích thước nhỏ."
+                    }
+                },
+                "Lớp 8": {
+                    "Chủ đề A. Máy tính và cộng đồng": {
+                        "Sơ lược về lịch sử phát triển máy tính": "Nhận biết\n– Trình bày được sơ lược lịch sử phát triển máy tính.\nThông hiểu\n– Nêu được ví dụ cho thấy sự phát triển máy tính đã đem đến những thay đổi lớn lao cho xã hội loài người."
+                    },
+                    "Chủ đề C. Tổ chức lưu trữ, tìm kiếm và trao đổi thông tin": {
+                        "1. Đặc điểm của thông tin trong môi trường số": "Nhận biết\n– Nêu được các đặc điểm của thông tin số: đa dạng, được thu thập ngày càng nhanh và nhiều, được lưu trữ với dung lượng khổng lồ bởi nhiều tổ chức và cá nhân, có tính bản quyền, có độ tin cậy rất khác nhau, có các công cụ tìm kiếm, chuyển đổi, truyền và xử lí hiệu quả.\nThông hiểu\n– Trình bày được tầm quan trọng của việc biết khai thác các nguồn thông tin đáng tin cậy, nêu được ví dụ minh hoạ.\n– Nêu được ví dụ minh hoạ sử dụng công cụ tìm kiếm, xử lí và trao đổi thông tin trong môi trường số.\nVận dụng\n– Sử dụng được công cụ tìm kiếm, xử lí và trao đổi thông tin trong môi trường số.",
+                        "2. Thông tin với giải quyết vấn đề": "Thông hiểu\n– Xác định được lợi ích của thông tin tìm được trong giải quyết vấn đề, nêu được ví dụ minh hoạ.\nVận dụng\n– Chủ động tìm kiếm được thông tin để thực hiện nhiệm vụ (thông qua bài tập cụ thể)."
+                    },
+                    "Chủ đề D. Đạo đức, pháp luật và văn hoá trong môi trường số": {
+                        "Đạo đức và văn hoá trong sử dụng công nghệ kĩ thuật số": "Thông hiểu\n– Nhận biết và giải thích được một số biểu hiện vi phạm đạo đức và pháp luật, biểu hiện thiếu văn hoá khi sử dụng công nghệ kĩ thuật số. Ví dụ: thu âm, quay phim, chụp ảnh khi không được phép, dùng các sản phẩm văn hoá vi phạm bản quyền, ...\nVận dụng\n– Khi tạo ra các sản phẩm số luôn thể hiện được tính đạo đức, văn hoá và không vi phạm pháp luật."
+                    },
+                    "Chủ đề E. Ứng dụng tin học": {
+                        "1. Xử lí và trực quan hoá dữ liệu bằng bảng tính điện tử": "Thông hiểu\n– Giải thích được sự khác nhau giữa địa chỉ tương đối và địa chỉ tuyệt đối của một ô tính.\n– Giải thích được sự thay đổi địa chỉ tương đối trong công thức khi sao chép công thức.\nVận dụng\n– Thực hiện được các thao tác tạo biểu đồ, lọc và sắp xếp dữ liệu. Nêu được một số tình huống thực tế cần sử dụng các chức năng đó của phần mềm bảng tính.\n– Sao chép được dữ liệu từ các tệp văn bản, trang trình chiếu sang trang tính.\nVận dụng cao\n– Sử dụng được phần mềm bảng tính trợ giúp giải quyết bài toán thực tế.",
+                        "2. Chủ đề con (lựa chọn): Soạn thảo văn bản và phần mềm trình chiếu nâng cao": "Vận dụng\n– Sử dụng được phần mềm soạn thảo:\n+ Thực hiện được các thao tác: chèn thêm, xoá bỏ, co dãn hình ảnh, vẽ hình đồ hoạ trong văn bản, tạo danh sách dạng liệt kê, đánh số trang, thêm đầu trang và chân trang.\n– Sử dụng được phần mềm trình chiếu:\n+ Chọn đặt được màu sắc, cỡ chữ hài hoà và hợp lí với nội dung.\n+ Đưa được vào trong trang chiếu đường dẫn đến video hay tài liệu khác.\n+ Thực hiện được thao tác đánh số trang, thêm đầu trang và chân trang.\n+ Sử dụng được các bản mẫu (template).\nVận dụng cao\n+ Tạo được một số sản phẩm là văn bản có tính thẩm mĩ phục vụ nhu cầu thực tế.\n+ Tạo được các sản phẩm số phục vụ học tập, giao lưu và trao đổi thông tin trong phần mềm trình chiếu.",
+                        "3. Chủ đề con (lựa chọn): Làm quen với phần mềm chỉnh sửa ảnh": "Thông hiểu\n– Nêu được một vài chức năng chính và thực hiện được một số thao tác cơ bản với phần mềm chỉnh sửa ảnh.\nVận dụng cao\n– Tạo được một vài sản phẩm số đơn giản đáp ứng nhu cầu cá nhân, gia đình, trường học và địa phương."
+                    },
+                    "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính": {
+                        "Lập trình trực quan": "Thông hiểu\n– Nêu được khái niệm hằng, biến, kiểu dữ liệu, biểu thức. Sử dụng được các khái niệm hằng, biến, kiểu dữ liệu, biểu thức ở các chương trình đơn giản trong môi trường lập trình trực quan.\n– Hiểu được chương trình là dãy các lệnh điều khiển máy tính thực hiện một thuật toán.\nVận dụng\n– Mô tả được kịch bản đơn giản dưới dạng thuật toán và tạo được một chương trình đơn giản.\n– Thể hiện được cấu trúc tuần tự, rẽ nhánh và lặp ở chương trình trong môi trường lập trình trực quan.\nVận dụng cao\n– Chạy thử, tìm lỗi và sửa được lỗi cho chương trình."
+                    },
+                    "Chủ đề G. Hướng nghiệp với tin học": {
+                        "Tin học và ngành nghề": "Nhận biết\n– Nêu được một số nghề nghiệp mà ứng dụng tin học sẽ làm tăng hiệu quả công việc.\n– Nêu được tên một số nghề thuộc lĩnh vực tin học và một số nghề liên quan đến ứng dụng tin học.\nThông hiểu\n– Nhận thức và trình bày được vấn đề bình đẳng giới trong việc sử dụng máy tính và trong ứng dụng tin học, nêu được ví dụ minh hoạ."
+                    }
+                },
+                 "Lớp 9": {
+                    "Chủ đề A. Máy tính và cộng đồng": {
+                        "Vai trò của máy tính trong đời sống": "Nhận biết\n– Nêu được khả năng của máy tính và chỉ ra được một số ứng dụng thực tế của nó trong khoa học kĩ thuật và đời sống.\nThông hiểu\n– Nhận biết được sự có mặt của các thiết bị có gắn bộ xử lí thông tin ở khắp nơi (trong gia đình, ở trường học, cửa hàng, bệnh viện, công sở, nhà máy,...), trong mọi lĩnh vực (y tế, ngân hàng, hàng không, toán học, sinh học,...), nêu được ví dụ minh hoạ.\n– Giải thích được tác động của công nghệ thông tin lên giáo dục và xã hội thông qua các ví dụ cụ thể."
+                    },
+                    "Chủ đề C. Tổ chức lưu trữ, tìm kiếm và trao đổi thông tin": {
+                        "Đánh giá chất lượng thông tin trong giải quyết vấn đề": "Thông hiểu\n– Giải thích được sự cần thiết phải quan tâm đến chất lượng thông tin khi tìm kiếm, tiếp nhận và trao đổi thông tin. Nêu được ví dụ minh hoạ.\n– Giải thích được tính mới, tính chính xác, tính đầy đủ, tính sử dụng được của thông tin. Nêu được ví dụ minh hoạ."
+                    },
+                    "Chủ đề D. Đạo đức, pháp luật và văn hoá trong môi trường số": {
+                        "Một số vấn đề pháp lí về sử dụng dịch vụ Internet": "Nhận biết\n– Nêu được một số nội dung liên quan đến luật Công nghệ thông tin, nghị định về sử dụng dịch vụ Internet, các khía cạnh pháp lí của việc sở hữu, sử dụng và trao đổi thông tin.\nThông hiểu\n– Trình bày được một số tác động tiêu cực của công nghệ kĩ thuật số đối với đời sống con người và xã hội, nêu được ví dụ minh hoạ.\n– Nêu được một số hành vi vi phạm pháp luật, trái đạo đức, thiếu văn hoá khi hoạt động trong môi trường số thông qua một vài ví dụ."
+                    },
+                    "Chủ đề E. Ứng dụng tin học": {
+                        "1. Phần mềm mô phỏng và khám phá tri thức": "Nhận biết\n– Nêu được những kiến thức đã thu nhận từ việc khai thác một vài phần mềm mô phỏng.\n– Nhận biết được sự mô phỏng thế giới thực nhờ máy tính có thể giúp con người khám phá tri thức và giải quyết vấn đề.\nThông hiểu\n– Nêu được ví dụ phần mềm mô phỏng.",
+                        "2. Trình bày thông tin trong trao đổi và hợp tác": "Nhận biết\n– Biết được khả năng đính kèm văn bản, ảnh, video, trang tính vào sơ đồ tư duy.\nVận dụng\n– Sử dụng được hình ảnh, biểu đồ, video trong trao đổi thông tin và hợp tác.\nVận dụng cao\n– Sử dụng được bài trình chiếu và sơ đồ tư duy trong trao đổi thông tin và hợp tác.",
+                        "3. Chủ đề con (lựa chọn): Sử dụng bảng tính điện tử nâng cao": "Vận dụng cao\n– Thực hiện được dự án sử dụng bảng tính điện tử góp phần giải quyết một bài toán liên quan đến quản lí tài chính, dân số,... Ví dụ: quản lí chi tiêu của gia đình, quản lí thu chi quỹ lớp.",
+                        "4. Chủ đề con (lựa chọn): Làm quen với phần mềm làm video": "Vận dụng\n– Nêu được một số chức năng và thực hiện được một số thao tác cơ bản trong sử dụng một phần mềm làm video.\nVận dụng cao\n– Tạo được một vài đoạn video đáp ứng nhu cầu cuộc sống của cá nhân, gia đình, trường học, địa phương."
+                    },
+                    "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính": {
+                        "Giải bài toán bằng máy tính": "Thông qua các ví dụ về lập trình trực quan:\nNhận biết\n– Nêu được quy trình con người giao bài toán cho máy tính giải quyết.\nThông hiểu\n– Trình bày được quá trình giải quyết vấn đề và mô tả được giải pháp dưới dạng thuật toán (hoặc bằng phương pháp liệt kê các bước hoặc bằng sơ đồ khối).\n– Giải thích được trong quy trình giải quyết vấn đề có những bước (những vấn đề nhỏ hơn) có thể chuyển giao cho máy tính thực hiện, nêu được ví dụ minh hoạ.\n– Giải thích được khái niệm bài toán trong tin học là một nhiệm vụ có thể giao cho máy tính thực hiện, nêu được ví dụ minh hoạ.\n– Giải thích được chương trình là bản mô tả thuật toán bằng ngôn ngữ mà máy tính có thể “hiểu” và thực hiện.\nVận dụng\n– Sử dụng được cấu trúc tuần tự, rẽ nhánh, lặp trong mô tả thuật toán."
+                    },
+                    "Chủ đề G. Hướng nghiệp với tin học": {
+                        "Tin học và định hướng nghề nghiệp": "Nhận biết\n– Trình bày được công việc đặc thù và sản phẩm chính của người làm tin học trong ít nhất ba nhóm nghề.\n– Nhận biết được đặc trưng cơ bản của nhóm nghề thuộc hướng Tin học ứng dụng và nhóm nghề thuộc hướng Khoa học máy tính.\nThông hiểu\n– Nêu và giải thích được ý kiến cá nhân (thích hay không thích,...) về một nhóm nghề nào đó.\n– Giải thích được cả nam và nữ đều có thể thích hợp với các ngành nghề trong lĩnh vực tin học, nêu được ví dụ minh hoạ.\nVận dụng\n– Tìm hiểu được (thông qua Internet và những kênh thông tin khác) công việc ở một số doanh nghiệp, công ti có sử dụng nhân lực thuộc các nhóm ngành đã được giới thiệu."
+                    }
+                }
+            };
+            
+            const predefinedFoldersByGrade = {
+                "Lớp 6": [
+                    { group: "Chủ đề A. Máy tính và cộng đồng", items: ["1. Thông tin và dữ liệu", "2. Biểu diễn thông tin và lưu trữ dữ liệu trong máy tính"] },
+                    { group: "Chủ đề B. Mạng máy tính và Internet", items: ["Giới thiệu về mạng máy tính và Internet"] },
+                    { group: "Chủ đề C. Tổ chức lưu trữ, tìm kiếm và trao đổi thông tin", items: ["World Wide Web, thư điện tử và công cụ tìm kiếm thông tin"] },
+                    { group: "Chủ đề D. Đạo đức, pháp luật và văn hoá trong môi trường số", items: ["Đề phòng một số tác hại khi tham gia Internet"] },
+                    { group: "Chủ đề E. Ứng dụng tin học", items: ["1. Soạn thảo văn bản cơ bản", "2. Sơ đồ tư duy và phần mềm sơ đồ tư duy"] },
+                    { group: "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính", items: ["Khái niệm thuật toán và biểu diễn thuật toán"] }
+                ],
+                 "Lớp 7": [
+                    { group: "Chủ đề A. Máy tính và cộng đồng", items: ["1. Sơ lược về các thành phần của máy tính", "2. Khái niệm hệ điều hành và phần mềm ứng dụng"] },
+                    { group: "Chủ đề C. Tổ chức lưu trữ, tìm kiếm và trao đổi thông tin", items: ["Mạng xã hội và một số kênh trao đổi thông tin thông dụng trên Internet"] },
+                    { group: "Chủ đề D. Đạo đức, pháp luật và văn hoá trong môi trường số", items: ["Văn hoá ứng xử qua phương tiện truyền thông số"] },
+                    { group: "Chủ đề E. Ứng dụng tin học", items: ["1. Bảng tính điện tử cơ bản", "2. Phần mềm trình chiếu cơ bản"] },
+                    { group: "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính", items: ["Một số thuật toán sắp xếp và tìm kiếm cơ bản"] }
+                ],
+                "Lớp 8": [
+                    { group: "Chủ đề A. Máy tính và cộng đồng", items: ["Sơ lược về lịch sử phát triển máy tính"] },
+                    { group: "Chủ đề C. Tổ chức lưu trữ, tìm kiếm và trao đổi thông tin", items: ["1. Đặc điểm của thông tin trong môi trường số", "2. Thông tin với giải quyết vấn đề"] },
+                    { group: "Chủ đề D. Đạo đức, pháp luật và văn hoá trong môi trường số", items: ["Đạo đức và văn hoá trong sử dụng công nghệ kĩ thuật số"] },
+                    { group: "Chủ đề E. Ứng dụng tin học", items: ["1. Xử lí và trực quan hoá dữ liệu bằng bảng tính điện tử", "2. Chủ đề con (lựa chọn): Soạn thảo văn bản và phần mềm trình chiếu nâng cao", "3. Chủ đề con (lựa chọn): Làm quen với phần mềm chỉnh sửa ảnh"] },
+                    { group: "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính", items: ["Lập trình trực quan"] },
+                    { group: "Chủ đề G. Hướng nghiệp với tin học", items: ["Tin học và ngành nghề"] }
+                ],
+                "Lớp 9": [
+                    { group: "Chủ đề A. Máy tính và cộng đồng", items: ["Vai trò của máy tính trong đời sống"] },
+                    { group: "Chủ đề C. Tổ chức lưu trữ, tìm kiếm và trao đổi thông tin", items: ["Đánh giá chất lượng thông tin trong giải quyết vấn đề"] },
+                    { group: "Chủ đề D. Đạo đức, pháp luật và văn hoá trong môi trường số", items: ["Một số vấn đề pháp lí về sử dụng dịch vụ Internet"] },
+                    { group: "Chủ đề E. Ứng dụng tin học", items: ["1. Phần mềm mô phỏng và khám phá tri thức", "2. Trình bày thông tin trong trao đổi và hợp tác", "3. Chủ đề con (lựa chọn): Sử dụng bảng tính điện tử nâng cao", "4. Chủ đề con (lựa chọn): Làm quen với phần mềm làm video"] },
+                    { group: "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính", items: ["Giải bài toán bằng máy tính"] },
+                    { group: "Chủ đề G. Hướng nghiệp với tin học", items: ["Tin học và định hướng nghề nghiệp"] }
+                ]
+            };
+
+            // --- Utility Functions ---
+            const findDirectory = (path) => {
+                let current = fileSystem;
+                for (const segment of path) {
+                    current = current.children.find(child => child.name === segment && child.type === 'folder');
+                    if (!current) return null;
+                }
+                return current;
+            };
+            
+            const getCurrentDirectory = () => findDirectory(currentPath);
+
+             const getRequirementsHtml = (grade, mainTopic, subTopic) => {
+                const gradeNumberMatch = grade.match(/\d+/);
+                if (!gradeNumberMatch) {
+                    console.error(`Không thể tìm thấy số lớp trong tên thư mục: ${grade}`);
+                    return '';
+                }
+                const gradeKey = `Lớp ${gradeNumberMatch[0]}`;
+                const gradeData = requirementsData[gradeKey];
+
+                if (!gradeData || !gradeData[mainTopic] || !gradeData[mainTopic][subTopic]) {
+                    console.error(`Yêu cầu không tìm thấy cho: ${gradeKey} -> ${mainTopic} -> ${subTopic}`);
+                    return ''; // Trả về chuỗi rỗng nếu không tìm thấy dữ liệu
+                }
+                const requirementsText = gradeData[mainTopic][subTopic];
+                
+                // Xử lý các dòng văn bản để thêm cấu trúc (in đậm cho các cấp độ)
+                const levelKeywords = ["nhận biết", "thông hiểu", "vận dụng", "vận dụng cao"];
+                let isFirstLevel = true; // Cờ để tránh thêm lề trên cho cấp độ đầu tiên
+                
+                return requirementsText.split('\n').map(line => {
+                    const trimmedLine = line.trim();
+                    if (!trimmedLine) return ''; // Bỏ qua các dòng trống
+
+                    const coreText = trimmedLine.replace(/^[\d.]+\s*/, '').toLowerCase();
+                    const isLevel = levelKeywords.some(keyword => coreText.startsWith(keyword));
+                    
+                    if (isLevel) {
+                        const marginTopClass = isFirstLevel ? '' : 'mt-2'; // Thêm lề trên cho các cấp độ tiếp theo
+                        isFirstLevel = false;
+                        return `<strong class="block font-semibold ${marginTopClass}">${trimmedLine}</strong>`;
+                    } else {
+                        return `<div class="pl-2">${trimmedLine}</div>`;
+                    }
+                }).join('');
+            };
+
+            const createDefaultMatrixData = (topic, subTopic, grade) => {
+                const requirements = getRequirementsHtml(grade, topic, subTopic);
+                return {
+                    matrix: {
+                        rows: [
+                            ['1', topic, subTopic, '', '', '', '', '', '', '', '', '0', '']
+                        ]
+                    },
+                    specifications: {
+                        rows: [
+                            ['1', topic, subTopic, requirements, '', '', '', '']
+                        ]
+                    },
+                    availableCounts: [
+                        { NB: {TN: 0, TL: 0}, TH: {TN: 0, TL: 0}, VD: {TN: 0, TL: 0}, VDC: {TN: 0, TL: 0} }
+                    ]
+                };
+            };
+
+            const addRowToMatrix = (matrixData, topic, subTopic, grade) => {
+                const requirements = getRequirementsHtml(grade, topic, subTopic);
+                const newRowIndex = matrixData.matrix.rows.length + 1;
+                matrixData.matrix.rows.push([newRowIndex.toString(), topic, subTopic, '', '', '', '', '', '', '', '', '0', '']);
+                matrixData.specifications.rows.push([newRowIndex.toString(), topic, subTopic, requirements, '', '', '', '']);
+                matrixData.availableCounts.push({ NB: {TN: 0, TL: 0}, TH: {TN: 0, TL: 0}, VD: {TN: 0, TL: 0}, VDC: {TN: 0, TL: 0} });
+            };
+
+            const populateFolderSelect = () => {
+                folderNameSelect.innerHTML = '<option value="" disabled selected>Chọn một chủ đề</option>';
+                if (currentPath.length !== 1) return;
+
+                const gradeFolderName = currentPath[0];
+                const gradeNumberMatch = gradeFolderName.match(/\d+/);
+                if (!gradeNumberMatch) return;
+                const gradeKey = `Lớp ${gradeNumberMatch[0]}`;
+
+                const topicsForGrade = predefinedFoldersByGrade[gradeKey];
+                if (!topicsForGrade) return;
+
+                topicsForGrade.forEach(category => {
+                    const optgroup = document.createElement('optgroup');
+                    optgroup.label = category.group;
+                    category.items.forEach(name => {
+                        const option = document.createElement('option');
+                        option.value = name;
+                        option.textContent = name;
+                        optgroup.appendChild(option);
+                    });
+                    folderNameSelect.appendChild(optgroup);
+                });
+            };
+
+            const showToast = (message, isError = true) => {
+                // Xóa timeout cũ nếu có, đảm bảo thông báo mới hiển thị đủ 3s
+                if (toastTimeout) {
+                    clearTimeout(toastTimeout);
+                }
+
+                toastMessage.textContent = message;
+                // Hiển thị thông báo
+                toast.className = `fixed bottom-5 right-5 ${isError ? 'bg-red-500' : 'bg-green-500'} text-white py-2 px-5 rounded-lg shadow-lg opacity-100 transform translate-y-0 transition-all duration-300 z-50`;
+                
+                // Đặt timeout mới để ẩn thông báo sau 3 giây
+                toastTimeout = setTimeout(() => {
+                    toast.className = toast.className.replace('opacity-100 translate-y-0', 'opacity-0 translate-y-[20px]');
+                    toastTimeout = null; // Đặt lại biến timeout
+                }, 3000);
+            };
+
+            // --- Drag and Drop Handlers ---
+            const handleDragStart = (e) => { e.stopPropagation(); const name = e.currentTarget.dataset.name; const type = e.currentTarget.dataset.type; draggedItemInfo = { name, type, sourcePath: [...currentPath] }; e.dataTransfer.effectAllowed = 'move'; e.currentTarget.classList.add('is-dragging'); };
+            const handleDragEnd = (e) => { e.stopPropagation(); draggedItemInfo = null; document.querySelectorAll('.is-dragging').forEach(el => el.classList.remove('is-dragging')); document.querySelectorAll('.dragging-over').forEach(el => el.classList.remove('dragging-over')); };
+            const handleDragOver = (e) => { e.preventDefault(); e.stopPropagation(); if (e.currentTarget.dataset.type === 'folder' && draggedItemInfo) { const targetName = e.currentTarget.dataset.name; const isSelf = draggedItemInfo.type === 'folder' && draggedItemInfo.name === targetName && JSON.stringify(draggedItemInfo.sourcePath) === JSON.stringify(currentPath); if (!isSelf) { e.dataTransfer.dropEffect = 'move'; e.currentTarget.classList.add('dragging-over'); } else { e.dataTransfer.dropEffect = 'none'; } } };
+            const handleDragLeave = (e) => { e.stopPropagation(); e.currentTarget.classList.remove('dragging-over'); };
+            const handleDrop = (e) => {
+                e.preventDefault(); e.stopPropagation(); e.currentTarget.classList.remove('dragging-over'); if (!draggedItemInfo) return;
+                const targetName = e.currentTarget.dataset.name; if (e.currentTarget.dataset.type !== 'folder') return;
+                const sourceParentDir = findDirectory(draggedItemInfo.sourcePath); const destDir = getCurrentDirectory().children.find(c => c.name === targetName);
+                if (!sourceParentDir || !destDir) { showToast('Lỗi: Không tìm thấy thư mục nguồn hoặc đích.'); return; }
+                const itemIndex = sourceParentDir.children.findIndex(c => c.name === draggedItemInfo.name); const itemToMove = sourceParentDir.children[itemIndex];
+                if (destDir.children.some(c => c.name === itemToMove.name)) { showToast(`"${destDir.name}" đã chứa một mục tên là "${itemToMove.name}".`); return; }
+                if (itemToMove.type === 'folder') { let destPathStr = [...currentPath, destDir.name].join('/'); let sourcePathStr = [...draggedItemInfo.sourcePath, itemToMove.name].join('/'); if (destPathStr.startsWith(sourcePathStr)) { showToast("Không thể di chuyển thư mục vào thư mục con của nó."); return; } }
+                sourceParentDir.children.splice(itemIndex, 1); destDir.children.push(itemToMove); clearSelection(); render(); showToast(`Đã di chuyển "${itemToMove.name}" vào "${destDir.name}".`, false);
+            };
+
+            const handleDeleteRow = (indexToDelete) => {
+                const currentDir = getCurrentDirectory();
+                if (currentDir && currentDir.matrixData) {
+                    // Sửa lỗi: Lấy tên chủ đề CẦN XÓA trước khi thực hiện xóa
+                    const deletedTopicName = currentDir.matrixData.specifications.rows[indexToDelete]?.[2];
+
+                    // Xóa hàng khỏi dữ liệu ma trận
+                    currentDir.matrixData.matrix.rows.splice(indexToDelete, 1);
+                    currentDir.matrixData.specifications.rows.splice(indexToDelete, 1);
+                    currentDir.matrixData.availableCounts.splice(indexToDelete, 1);
+                    
+                    // Đánh số lại thứ tự các hàng còn lại
+                    for (let i = 0; i < currentDir.matrixData.matrix.rows.length; i++) {
+                        currentDir.matrixData.matrix.rows[i][0] = i + 1;
+                        currentDir.matrixData.specifications.rows[i][0] = i + 1;
+                    }
+
+                    // Nếu tìm thấy tên, xóa thư mục chủ đề tương ứng
+                    if (deletedTopicName) {
+                        // Sửa lỗi: Logic filter để xóa đúng thư mục
+                        currentDir.children = currentDir.children.filter(child => !(child.name === deletedTopicName && child.type === 'folder'));
+                    }
+                    
+                    // Nếu ma trận rỗng, xóa dữ liệu ma trận
+                    if (currentDir.matrixData.matrix.rows.length === 0) { 
+                        delete currentDir.matrixData; 
+                    }
+                    
+                    // Vẽ lại toàn bộ giao diện để đồng bộ hóa danh sách tệp và ma trận
+                    render(); 
+                }
+            };
+
+            const formatDiem = (diem) => {
+                // Nhân với 100 và làm tròn để có một số nguyên ổn định, tránh lỗi dấu phẩy động.
+                const scaled = Math.round(diem * 100);
+
+                // Kiểm tra xem kết quả có tương ứng với một số nguyên không (ví dụ: 1.00 -> 100)
+                if (scaled % 100 === 0) {
+                    return (scaled / 100).toFixed(1); // Định dạng là "1.0"
+                }
+                
+                // Đối với các số khác (ví dụ: 0.75 -> 75, 0.5 -> 50), chỉ cần chuyển đổi lại và trả về chuỗi.
+                return (scaled / 100).toString();
+            };
+
+            // --- Rendering Functions ---
+            const render = () => {
+                const currentDir = getCurrentDirectory();
+                
+                // Reset visibility
+                matrixContainer.classList.add('hidden');
+                uploadBtn.classList.add('hidden');
+                fileExplorer.classList.add('hidden');
+
+                if (currentPath.length === 0) { // Root level
+                    fileExplorer.classList.remove('hidden');
+                } else if (currentPath.length === 1) { // Grade/Exam level
+                    if (currentDir.matrixData) {
+                        matrixContainer.classList.remove('hidden');
+                        renderMatrix(currentDir.matrixData, false);
+                    }
+                    fileExplorer.classList.remove('hidden');
+                } else if (currentPath.length >= 2) { // Topic level and deeper
+                    fileExplorer.classList.remove('hidden');
+                    uploadBtn.classList.remove('hidden'); // Show upload button inside topic folder
+                }
+
+                fileList.innerHTML = ''; 
+                if (!currentDir) return;
+
+                const sortedChildren = [...currentDir.children].sort((a, b) => {
+                    if (a.type === 'folder' && b.type !== 'folder') return -1;
+                    if (a.type !== 'folder' && b.type === 'folder') return 1;
+                    return a.name.localeCompare(b.name, 'vi');
+                });
+
+                emptyFolderMessage.style.display = 'none';
+                createInitialFolderBtn.classList.add('hidden');
+
+                // Show "Create" card only at root and grade/exam level
+                if (currentPath.length <= 1) {
+                    const createFolderCard = document.createElement('div');
+                    createFolderCard.className = 'flex items-center justify-center p-3 bg-slate-50 rounded-lg cursor-pointer hover:bg-indigo-100 border-2 border-dashed border-slate-300 hover:border-indigo-400 transition-all duration-200 h-full';
+                    const cardText = currentPath.length === 0 ? 'Tạo loại đề mới' : 'Tạo chủ đề mới';
+                    createFolderCard.innerHTML = `
+                        <div class="text-center text-slate-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mx-auto mb-2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                            <span class="font-semibold">${cardText}</span>
+                        </div>`;
+                    createFolderCard.addEventListener('click', handleCreateFolderClick);
+                    fileList.appendChild(createFolderCard);
+                }
+                
+                // Render existing items after the card
+                sortedChildren.forEach(item => renderItem(item));
+
+                if (sortedChildren.length === 0 && currentPath.length > 0) {
+                     emptyFolderMessage.style.display = 'flex';
+                     const emptyText = emptyFolderMessage.querySelector('p.font-semibold');
+                     const emptySubText = emptyFolderMessage.querySelector('p.text-sm');
+                     emptyText.textContent = "Thư mục này trống.";
+                     emptySubText.textContent = "Bạn có thể tạo chủ đề mới hoặc tải lên tệp.";
+                }
+
+
+                renderBreadcrumbs();
+            };
+            
+            const renderItem = (item) => {
+                const itemElement = document.createElement('div');
+                const isSelected = selectedItems.includes(item.name);
+                itemElement.className = `relative flex items-center p-3 bg-slate-100 rounded-lg transition-all duration-200 ${isSelected ? 'bg-sky-100 ring-2 ring-sky-500' : ''}`;
+                
+                const icon = item.type === 'folder' 
+                    ? `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-amber-500"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"></path></svg>`
+                    : `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-600"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>`;
+                
+                itemElement.innerHTML = `
+                    <input type="checkbox" data-name="${item.name}" class="item-checkbox h-5 w-5 rounded border-slate-400 text-indigo-600 focus:ring-indigo-500 cursor-pointer flex-shrink-0" ${isSelected ? 'checked' : ''}>
+                    <div class="item-clickable flex items-center cursor-pointer ml-3 flex-grow min-w-0" draggable="true" data-name="${item.name}" data-type="${item.type}">
+                        <div class="mr-3 flex-shrink-0">${icon}</div>
+                        <span class="font-medium text-slate-700 truncate">${item.name}</span>
+                    </div>`;
+                
+                const clickablePart = itemElement.querySelector('.item-clickable');
+                clickablePart.addEventListener('dragstart', handleDragStart);
+                clickablePart.addEventListener('dragend', handleDragEnd);
+
+                if (item.type === 'folder') {
+                    clickablePart.addEventListener('click', () => { 
+                        clearSelection(); 
+                        
+                        // Logic mới: Tự động cập nhật ma trận khi click vào thư mục chủ đề
+                        if (currentPath.length === 1) { // Nếu đang ở cấp "Loại đề"
+                             const currentDir = getCurrentDirectory();
+                             const topicFolder = currentDir.children.find(c => c.name === item.name && c.type === 'folder');
+                             if (topicFolder) {
+                                 updateMatrixFromTopicFolder(currentDir, topicFolder);
+                             }
+                        }
+
+                        // Điều hướng vào thư mục
+                        currentPath.push(item.name); 
+                        render(); 
+                    });
+                    clickablePart.addEventListener('dragover', handleDragOver);
+                    clickablePart.addEventListener('dragleave', handleDragLeave);
+                    clickablePart.addEventListener('drop', handleDrop);
+                } 
+                // Không cần xử lý click cho tệp nữa, vì số liệu được tổng hợp ở cấp thư mục.
+                fileList.appendChild(itemElement);
+            }
+
+            const renderBreadcrumbs = () => {
+                breadcrumbs.innerHTML = '';
+                const rootCrumb = document.createElement('li');
+                rootCrumb.innerHTML = `<a href="#" class="hover:text-indigo-600" data-path-index="-1">Thư mục gốc</a>`;
+                breadcrumbs.appendChild(rootCrumb);
+                currentPath.forEach((segment, index) => {
+                    const separator = document.createElement('li'); separator.textContent = '/'; separator.className = 'text-slate-400'; breadcrumbs.appendChild(separator);
+                    const pathCrumb = document.createElement('li');
+                    if (index === currentPath.length - 1) { pathCrumb.innerHTML = `<span class="font-semibold text-slate-800">${segment}</span>`; } 
+                    else { pathCrumb.innerHTML = `<a href="#" class="hover:text-indigo-600" data-path-index="${index}">${segment}</a>`; }
+                    breadcrumbs.appendChild(pathCrumb);
+                });
+            };
+
+            const renderMatrix = (data, shouldScroll = false) => {
+                if (!data || !data.matrix || !data.specifications) { return; }
+                matrixContent.innerHTML = ''; 
+                const deleteButtonHtml = (index) => `<button class="delete-row-btn text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100 transition-colors" data-index="${index}" title="Xóa dòng"><svg class="pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>`;
+                
+                const pointsTNKQ = 0.25;
+                const pointsTL = 1;
+
+                // Calculate total points for the entire test
+                let totalTNKQ_all = 0;
+                let totalTL_all = 0;
+                data.matrix.rows.forEach(row => {
+                    totalTNKQ_all += (parseInt(row[3] || 0) + parseInt(row[5] || 0) + parseInt(row[7] || 0) + parseInt(row[9] || 0));
+                    totalTL_all += (parseInt(row[4] || 0) + parseInt(row[6] || 0) + parseInt(row[8] || 0) + parseInt(row[10] || 0));
+                });
+                const totalTestPoints = (totalTNKQ_all * pointsTNKQ) + (totalTL_all * pointsTL);
+
+                // --- KHUNG MA TRẬN ---
+                const matrixTable = document.createElement('table'); 
+                matrixTable.id = 'khung-ma-tran';
+                matrixTable.className = 'w-full border-collapse matrix-table mb-8';
+                let matrixHtml = `<caption class="text-lg font-bold text-slate-800 p-2 mb-2">KHUNG MA TRẬN ĐỀ KIỂM TRA</caption><thead><tr><th>TT</th><th>Chương/chủ đề</th><th>Nội dung/đơn vị kiến thức</th><th colspan="2">Nhận biết</th><th colspan="2">Thông hiểu</th><th colspan="2">Vận dụng</th><th colspan="2">Vận dụng cao</th><th>Tỉ lệ điểm (%)</th></tr><tr><th colspan="3"></th><th>TNKQ</th><th>TL</th><th>TNKQ</th><th>TL</th><th>TNKQ</th><th>TL</th><th>TNKQ</th><th>TL</th><th></th></tr></thead><tbody>`;
+                let i = 0;
+                while (i < data.matrix.rows.length) {
+                    const mainTopic = data.matrix.rows[i][1]; let rowspanCount = 1;
+                    for (let j = i + 1; j < data.matrix.rows.length; j++) { if (data.matrix.rows[j][1] === mainTopic) { rowspanCount++; } else { break; } }
+                    
+                    const processRow = (row) => {
+                        const tnkqInRow = (parseInt(row[3] || 0) + parseInt(row[5] || 0) + parseInt(row[7] || 0) + parseInt(row[9] || 0));
+                        const tlInRow = (parseInt(row[4] || 0) + parseInt(row[6] || 0) + parseInt(row[8] || 0) + parseInt(row[10] || 0));
+                        const pointsInRow = (tnkqInRow * pointsTNKQ) + (tlInRow * pointsTL);
+                        const percentage = (totalTestPoints > 0) ? ((pointsInRow / totalTestPoints) * 100).toFixed(0) : '0';
+                        
+                        let rowHtml = `<td class="bg-white text-left">${row[2] || ''}</td>`;
+                        for (let k = 3; k < 11; k++) {
+                            const cau = parseInt(row[k] || 0);
+                            if (cau > 0) {
+                                const isTNKQ = k % 2 !== 0;
+                                const diem = isTNKQ ? (cau * pointsTNKQ) : (cau * pointsTL);
+                                rowHtml += `<td class="bg-white">${cau} Câu - ${formatDiem(diem)}đ</td>`;
+                            } else {
+                                rowHtml += `<td class="bg-white"></td>`;
+                            }
+                        }
+                        rowHtml += `<td class="bg-white">${percentage}%</td>`;
+                        return rowHtml;
+                    };
+
+                    let firstRow = data.matrix.rows[i];
+                    matrixHtml += `<tr>
+                        <td class="bg-white stt-cell">
+                            <span class="stt-number">${firstRow[0] || ''}</span>
+                            ${deleteButtonHtml(i)}
+                        </td>
+                        <td class="bg-white align-top text-left" rowspan="${rowspanCount}">${firstRow[1] || ''}</td>`;
+                    matrixHtml += processRow(firstRow);
+                    matrixHtml += `</tr>`;
+                    
+                    for (let k = 1; k < rowspanCount; k++) {
+                        let subsequentRow = data.matrix.rows[i + k];
+                        matrixHtml += `<tr>
+                            <td class="bg-white stt-cell">
+                                <span class="stt-number">${subsequentRow[0] || ''}</span>
+                                ${deleteButtonHtml(i+k)}
+                            </td>`;
+                        matrixHtml += processRow(subsequentRow);
+                        matrixHtml += `</tr>`;
+                    }
+                    i += rowspanCount;
+                }
+                const matrixTotals = Array(13).fill(0);
+                let grandTotalQuestions = 0;
+                data.matrix.rows.forEach(row => {
+                    for (let i = 3; i < 11; i++) {
+                        matrixTotals[i] += parseInt(row[i], 10) || 0;
+                    }
+                });
+                for(let i = 3; i < 11; i++) grandTotalQuestions += matrixTotals[i];
+                
+                const nbPoints = (matrixTotals[3] * pointsTNKQ) + (matrixTotals[4] * pointsTL);
+                const thPoints = (matrixTotals[5] * pointsTNKQ) + (matrixTotals[6] * pointsTL);
+                const vdPoints = (matrixTotals[7] * pointsTNKQ) + (matrixTotals[8] * pointsTL);
+                const vdcPoints = (matrixTotals[9] * pointsTNKQ) + (matrixTotals[10] * pointsTL);
+
+                const nbPercent = totalTestPoints > 0 ? (nbPoints / totalTestPoints * 100).toFixed(0) : 0;
+                const thPercent = totalTestPoints > 0 ? (thPoints / totalTestPoints * 100).toFixed(0) : 0;
+                const vdPercent = totalTestPoints > 0 ? (vdPoints / totalTestPoints * 100).toFixed(0) : 0;
+                const vdcPercent = totalTestPoints > 0 ? (vdcPoints / totalTestPoints * 100).toFixed(0) : 0;
+                
+                const nb_th_points = nbPoints + thPoints;
+                const vd_vdc_points = vdPoints + vdcPoints;
+                const nb_th_percent = totalTestPoints > 0 ? (nb_th_points / totalTestPoints * 100).toFixed(0) : 0;
+                const vd_vdc_percent = totalTestPoints > 0 ? (vd_vdc_points / totalTestPoints * 100).toFixed(0) : 0;
+
+                matrixHtml += `</tbody><tfoot class="font-bold bg-slate-100">
+                <tr>
+                    <td colspan="3" class="text-right">Tổng điểm</td>
+                    <td colspan="2">${formatDiem(nbPoints)}</td>
+                    <td colspan="2">${formatDiem(thPoints)}</td>
+                    <td colspan="2">${formatDiem(vdPoints)}</td>
+                    <td colspan="2">${formatDiem(vdcPoints)}</td>
+                    <td>${formatDiem(totalTestPoints)}</td>
+                </tr>
+                <tr>
+                    <td colspan="3" class="text-right">Tỉ lệ điểm (%)</td>
+                    <td colspan="2">${nbPercent}%</td>
+                    <td colspan="2">${thPercent}%</td>
+                    <td colspan="2">${vdPercent}%</td>
+                    <td colspan="2">${vdcPercent}%</td>
+                    <td>100%</td>
+                </tr>
+                 <tr>
+                    <td colspan="3" class="text-right">Tỉ lệ chung (%)</td>
+                    <td colspan="4">${nb_th_percent}%</td>
+                    <td colspan="4">${vd_vdc_percent}%</td>
+                    <td>100%</td>
+                </tr>
+                </tfoot>`;
+                matrixTable.innerHTML = matrixHtml; 
+                matrixContent.appendChild(matrixTable);
+
+                // --- BẢNG ĐẶC TẢ ---
+                const specTable = document.createElement('table');
+                specTable.className = 'w-full border-collapse matrix-table';
+                let specHtml = `<caption class="text-lg font-bold text-slate-800 p-2 mb-2">BẢNG ĐẶC TẢ ĐỀ KIỂM TRA</caption><thead><tr><th>TT</th><th>Chương/Chủ đề</th><th>Nội dung/Đơn vị kiến thức</th><th>Mức độ đánh giá</th><th>Nhận biết<br>(TNKQ)</th><th>Thông hiểu<br>(TNKQ)</th><th>Vận dụng<br>(TL)</th><th>Vận dụng cao<br>(TL)</th></tr></thead><tbody>`;
+                i = 0;
+                let specTotals = { NB: 0, TH: 0, VD: 0, VDC: 0 };
+                while (i < data.specifications.rows.length) {
+                    const mainTopic = data.specifications.rows[i][1]; let rowspanCount = 1;
+                    for (let j = i + 1; j < data.specifications.rows.length; j++) { if (data.specifications.rows[j][1] === mainTopic) { rowspanCount++; } else { break; } }
+                    
+                    let firstRow = data.specifications.rows[i];
+                    const nb_val_first = parseInt((firstRow[4] || '0-0').split('-')[0], 10) || '';
+                    const th_val_first = parseInt((firstRow[5] || '0-0').split('-')[0], 10) || '';
+                    const vd_val_first = parseInt((firstRow[6] || '0-0').split('-')[1], 10) || '';
+                    const vdc_val_first = parseInt((firstRow[7] || '0-0').split('-')[1], 10) || '';
+                    specTotals.NB += parseInt(nb_val_first || 0);
+                    specTotals.TH += parseInt(th_val_first || 0);
+                    specTotals.VD += parseInt(vd_val_first || 0);
+                    specTotals.VDC += parseInt(vdc_val_first || 0);
+
+                    specHtml += `<tr>
+                        <td class="bg-white stt-cell">
+                            <span class="stt-number">${firstRow[0] || ''}</span>
+                            ${deleteButtonHtml(i)}
+                        </td>
+                        <td class="bg-white align-top text-left" rowspan="${rowspanCount}">${firstRow[1] || ''}</td>
+                        <td class="bg-white text-left">${firstRow[2] || ''}</td>
+                        <td class="bg-white text-left">${firstRow[3] || ''}</td>
+                        <td class="bg-white editable-cell" data-row="${i}" data-col="4">${nb_val_first}</td>
+                        <td class="bg-white editable-cell" data-row="${i}" data-col="5">${th_val_first}</td>
+                        <td class="bg-white editable-cell" data-row="${i}" data-col="6">${vd_val_first}</td>
+                        <td class="bg-white editable-cell" data-row="${i}" data-col="7">${vdc_val_first}</td>
+                    </tr>`;
+
+                    for (let k = 1; k < rowspanCount; k++) {
+                        let subsequentRow = data.specifications.rows[i + k];
+                        const nb_val_sub = parseInt((subsequentRow[4] || '0-0').split('-')[0], 10) || '';
+                        const th_val_sub = parseInt((subsequentRow[5] || '0-0').split('-')[0], 10) || '';
+                        const vd_val_sub = parseInt((subsequentRow[6] || '0-0').split('-')[1], 10) || '';
+                        const vdc_val_sub = parseInt((subsequentRow[7] || '0-0').split('-')[1], 10) || '';
+                        specTotals.NB += parseInt(nb_val_sub || 0);
+                        specTotals.TH += parseInt(th_val_sub || 0);
+                        specTotals.VD += parseInt(vd_val_sub || 0);
+                        specTotals.VDC += parseInt(vdc_val_sub || 0);
+                        specHtml += `<tr>
+                            <td class="bg-white stt-cell">
+                                <span class="stt-number">${subsequentRow[0] || ''}</span>
+                                ${deleteButtonHtml(i+k)}
+                            </td>
+                            <td class="bg-white text-left">${subsequentRow[2] || ''}</td>
+                            <td class="bg-white text-left">${subsequentRow[3] || ''}</td>
+                            <td class="bg-white editable-cell" data-row="${i+k}" data-col="4">${nb_val_sub}</td>
+                            <td class="bg-white editable-cell" data-row="${i+k}" data-col="5">${th_val_sub}</td>
+                            <td class="bg-white editable-cell" data-row="${i+k}" data-col="6">${vd_val_sub}</td>
+                            <td class="bg-white editable-cell" data-row="${i+k}" data-col="7">${vdc_val_sub}</td>
+                        </tr>`;
+                    }
+                    i += rowspanCount;
+                }
+
+                specHtml += `</tbody><tfoot class="font-bold bg-slate-100"><tr>
+                    <td colspan="4" class="text-right">Tổng</td>
+                    <td>${specTotals.NB} TN</td>
+                    <td>${specTotals.TH} TN</td>
+                    <td>${specTotals.VD} TL</td>
+                    <td>${specTotals.VDC} TL</td>
+                </tr></tfoot>`;
+                specTable.innerHTML = specHtml; 
+                matrixContent.appendChild(specTable);
+                matrixContainer.classList.remove('hidden');
+                if (shouldScroll) { matrixContainer.scrollIntoView({ behavior: 'smooth' }); }
+            };
+            
+            // --- Selection & Action Toolbar Logic ---
+            const clearSelection = () => {
+                selectedItems = [];
+                updateActionToolbar();
+            };
+
+            const updateActionToolbar = () => {
+                if (selectedItems.length > 0) {
+                    actionToolbar.classList.remove('hidden');
+                    actionToolbar.classList.add('flex');
+                    selectionCountSpan.textContent = `${selectedItems.length} mục đã chọn`;
+                    renameBtn.disabled = selectedItems.length !== 1;
+                    renameBtn.classList.toggle('opacity-50', selectedItems.length !== 1);
+                } else {
+                    actionToolbar.classList.add('hidden');
+                    actionToolbar.classList.remove('flex');
+                }
+            };
+            
+            const updatePasteButtonVisibility = () => {
+                if (clipboard) {
+                    pasteBtn.classList.remove('hidden');
+                } else {
+                    pasteBtn.classList.add('hidden');
+                }
+            };
+
+            // --- Modal Handlers ---
+            const showConfirmModal = (title, text, callback) => {
+                confirmModalTitle.textContent = title;
+                confirmModalText.textContent = text;
+                confirmCallback = callback;
+                confirmModal.classList.remove('hidden');
+                confirmModal.classList.add('flex');
+            };
+
+            const hideConfirmModal = () => {
+                confirmModal.classList.add('hidden');
+                confirmModal.classList.remove('flex');
+                confirmCallback = null;
+            };
+
+            const openFolderModal = (mode, name = '') => {
+                folderModalMode = mode;
+                itemToRename = name;
+
+                const gradeCreator = document.getElementById('grade-creator');
+                const gradeSelect = document.getElementById('grade-select');
+                const gradeDescInput = document.getElementById('grade-desc-input');
+
+                // Hide all inputs first
+                gradeCreator.classList.add('hidden');
+                folderNameSelect.classList.add('hidden');
+                folderNameInput.classList.add('hidden');
+
+                if (mode === 'create' && currentPath.length === 0) { // Creating at root
+                    folderModalTitle.textContent = 'Tạo loại đề mới';
+                    confirmFolderBtn.textContent = 'Tạo';
+                    gradeCreator.classList.remove('hidden');
+                    gradeSelect.value = '';
+                    gradeDescInput.value = '';
+                } else if (mode === 'create' && currentPath.length === 1) { // Creating a topic folder
+                    folderModalTitle.textContent = 'Tạo chủ đề mới';
+                    confirmFolderBtn.textContent = 'Tạo';
+                    populateFolderSelect();
+                    folderNameSelect.classList.remove('hidden');
+                } else { // Renaming or creating in deeper levels
+                    folderModalTitle.textContent = mode === 'rename' ? 'Sửa tên mục' : 'Tạo thư mục mới';
+                    confirmFolderBtn.textContent = mode === 'rename' ? 'Lưu' : 'Tạo';
+                    folderNameInput.classList.remove('hidden');
+                    folderNameInput.value = name;
+                    folderNameInput.focus();
+                }
+
+                modal.classList.add('flex');
+                modal.classList.remove('hidden');
+            };
+            
+            const closeFolderModal = () => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            };
+            
+            // --- Event Handlers ---
+            const handleCreateFolderClick = () => openFolderModal('create');
+
+            const handleRenameClick = () => {
+                if (selectedItems.length !== 1) return;
+                openFolderModal('rename', selectedItems[0]);
+            };
+
+            const handleDeleteClick = () => {
+                if (selectedItems.length === 0) return;
+                showConfirmModal(
+                    `Xóa ${selectedItems.length} mục`,
+                    'Bạn có chắc chắn muốn xóa các mục đã chọn không? Hành động này không thể hoàn tác.',
+                    () => {
+                        const originalPath = [...currentPath];
+                        const currentDir = getCurrentDirectory();
+                        
+                        // Thực hiện xóa các mục đã chọn khỏi thư mục hiện tại
+                        currentDir.children = currentDir.children.filter(child => !selectedItems.includes(child.name));
+                        
+                        // Trường hợp 1: Xóa một THƯ MỤC CHỦ ĐỀ từ giao diện "Loại đề"
+                        if (originalPath.length === 1) {
+                            regenerateMatrix(currentDir);
+                        }
+                        // Trường hợp 2: Xóa một TỆP (hoặc thư mục) từ BÊN TRONG một thư mục chủ đề
+                        else if (originalPath.length >= 2) {
+                            const loaiDePath = [originalPath[0]];
+                            const loaiDeDir = findDirectory(loaiDePath);
+
+                            const topicFolderName = originalPath[1];
+                            const topicFolder = loaiDeDir.children.find(c => c.name === topicFolderName && c.type === 'folder');
+
+                            if (loaiDeDir && topicFolder) {
+                                // Tính toán lại và cập nhật ma trận dựa trên các tệp còn lại trong thư mục chủ đề
+                                updateMatrixFromTopicFolder(loaiDeDir, topicFolder);
+                            }
+                            
+                            // Để thấy kết quả cập nhật ngay, tự động điều hướng lên một cấp
+                            currentPath.pop();
+                        }
+
+                        clearSelection();
+                        render();
+                        hideConfirmModal();
+                    }
+                );
+            };
+
+            const handleCopyClick = () => {
+                 if (selectedItems.length === 0) return;
+                 const currentDir = getCurrentDirectory();
+                 const itemsToCopy = currentDir.children.filter(child => selectedItems.includes(child.name));
+                 clipboard = JSON.parse(JSON.stringify(itemsToCopy)); // Deep copy
+                 showToast(`Đã sao chép ${clipboard.length} mục vào bộ nhớ tạm.`, false);
+                 updatePasteButtonVisibility();
+                 clearSelection();
+                 render();
+            };
+
+            const handlePasteClick = () => {
+                if (!clipboard) return;
+                const currentDir = getCurrentDirectory();
+                let pastedCount = 0;
+                
+                clipboard.forEach(itemToPaste => {
+                    let newName = itemToPaste.name;
+                    let counter = 1;
+                    const originalName = newName;
+                    
+                    while (currentDir.children.some(child => child.name === newName)) {
+                        const extensionIndex = originalName.lastIndexOf('.');
+                        const hasExtension = extensionIndex > 0 && originalName.length - extensionIndex <= 5;
+                        const baseName = hasExtension ? originalName.substring(0, extensionIndex) : originalName;
+                        const extension = hasExtension ? originalName.substring(extensionIndex) : '';
+                        
+                        newName = `${baseName} - Copy${counter > 1 ? ` (${counter})` : ''}${extension}`;
+                        counter++;
+                    }
+
+                    const newItem = JSON.parse(JSON.stringify(itemToPaste)); // Deep copy from clipboard
+                    newItem.name = newName;
+                    currentDir.children.push(newItem);
+                    pastedCount++;
+                });
+
+                showToast(`Đã dán ${pastedCount} mục.`, false);
+                
+                clipboard = null;
+                updatePasteButtonVisibility();
+
+                clearSelection();
+                render();
+            };
+            
+            const regenerateMatrix = (dir) => {
+                const folders = dir.children.filter(c => c.type === 'folder');
+                if (folders.length === 0) {
+                    delete dir.matrixData;
+                    if (currentPath.length === 1) {
+                        render();
+                    }
+                    return;
+                }
+
+                const grade = dir.name;
+                const gradeNumberMatch = grade.match(/\d+/);
+                if (!gradeNumberMatch) {
+                    delete dir.matrixData;
+                    render();
+                    return;
+                }
+                const gradeKey = `Lớp ${gradeNumberMatch[0]}`;
+                const topicsForGrade = predefinedFoldersByGrade[gradeKey];
+                 if (!topicsForGrade) {
+                     delete dir.matrixData;
+                     render();
+                     return;
+                }
+
+                const topicsWithMainTopics = folders.map(folder => {
+                    const subTopic = folder.name;
+                    let mainTopic = '';
+                    for (const category of topicsForGrade) {
+                        if (category.items.includes(subTopic)) {
+                            mainTopic = category.group;
+                            break;
+                        }
+                    }
+                    if (!mainTopic) {
+                        console.warn(`Không tìm thấy chủ đề chính cho: ${subTopic}`);
+                    }
+                    return { mainTopic, subTopic };
+                }).filter(topic => topic.mainTopic); // Filter out topics where no main topic was found
+
+                topicsWithMainTopics.sort((a, b) => {
+                    const mainTopicCompare = a.mainTopic.localeCompare(b.mainTopic, 'vi');
+                    if (mainTopicCompare !== 0) {
+                        return mainTopicCompare;
+                    }
+                    return a.subTopic.localeCompare(b.subTopic, 'vi');
+                });
+
+                delete dir.matrixData;
+                
+                topicsWithMainTopics.forEach(topicInfo => {
+                    const { mainTopic, subTopic } = topicInfo;
+                    if (!dir.matrixData) {
+                        dir.matrixData = createDefaultMatrixData(mainTopic, subTopic, grade);
+                    } else {
+                        addRowToMatrix(dir.matrixData, mainTopic, subTopic, grade);
+                    }
+                });
+            };
+
+            confirmFolderBtn.addEventListener('click', () => {
+                let folderName;
+                if (folderModalMode === 'create') {
+                    if (currentPath.length === 0) { // Creating at root
+                        const selectedGrade = document.getElementById('grade-select').value;
+                        const description = document.getElementById('grade-desc-input').value.trim();
+                        if (!selectedGrade) {
+                            showToast('Vui lòng chọn khối lớp.');
+                            return;
+                        }
+                        if (!description) {
+                            showToast('Vui lòng nhập tên hoặc mô tả.');
+                            return;
+                        }
+                        folderName = `${selectedGrade} - ${description}`;
+                    } else if (currentPath.length === 1) { // Creating a topic folder
+                        folderName = folderNameSelect.value;
+                    } else { // Creating a generic folder deeper
+                        folderName = folderNameInput.value.trim();
+                    }
+                    
+                    if (!folderName) {
+                        showToast('Tên không được để trống.');
+                        return;
+                    }
+
+                    const parentDir = getCurrentDirectory();
+                    if (parentDir.children.some(child => child.name === folderName)) {
+                        showToast(`Tên "${folderName}" đã tồn tại.`);
+                        return;
+                    }
+                    
+                    parentDir.children.push({ name: folderName, type: 'folder', children: [] });
+                    if (currentPath.length === 1) {
+                        regenerateMatrix(parentDir);
+                    }
+                } else { // Rename mode
+                    const newName = folderNameInput.value.trim();
+                    const oldName = itemToRename;
+                    if (!newName) { showToast('Tên không được để trống.'); return; }
+                    
+                    const parentDir = getCurrentDirectory();
+                    if (newName !== oldName && parentDir.children.some(child => child.name === newName)) { showToast(`Tên "${newName}" đã tồn tại.`); return; }
+
+                    const item = parentDir.children.find(child => child.name === oldName);
+                    if (item) {
+                        item.name = newName;
+                         if (currentPath.length === 1 && item.type === 'folder' && parentDir.matrixData) {
+                            regenerateMatrix(parentDir);
+                         }
+                    }
+                }
+                clearSelection();
+                render();
+                closeFolderModal();
+            });
+
+            const generatePrintHTML = (data) => {
+                const currentDir = getCurrentDirectory();
+                const examName = currentDir.name.toUpperCase().replace(' - ', ' - ');
+                const matrixTitle = `KHUNG MA TRẬN ĐỀ KIỂM TRA ${examName.replace('LỚP', 'MÔN TIN LỚP')}`;
+                const specTitle = `BẢNG ĐẶC TẢ MỨC ĐỘ ĐÁNH GIÁ MÔN TIN - ${examName}`;
+                const pointsTNKQ = 0.25;
+                const pointsTL = 1;
+
+                const css = `
+                    <style>
+                        @page { size: A4 landscape; margin: 1.5cm; }
+                        body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; }
+                        table { width: 100%; border-collapse: collapse; table-layout: auto; }
+                        caption { font-size: 14pt; font-weight: bold; margin-bottom: 1rem; text-align: center; }
+                        th, td { border: 1px solid black; padding: 4px; text-align: center; vertical-align: middle; }
+                        th { font-weight: bold; }
+                        .text-left { text-align: left; }
+                        .page-break { page-break-after: always; }
+                        .muc-do-danh-gia { text-align: left; font-size: 10pt; }
+                        tfoot td { font-weight: bold; }
+                    </style>
+                `;
+
+                // --- PAGE 1: KHUNG MA TRẬN ---
+                const totalMatrixPoints = data.matrix.rows.reduce((total, row) => {
+                    const tnkq = (parseInt(row[3]||0) + parseInt(row[5]||0) + parseInt(row[7]||0) + parseInt(row[9]||0));
+                    const tl = (parseInt(row[4]||0) + parseInt(row[6]||0) + parseInt(row[8]||0) + parseInt(row[10]||0));
+                    return total + (tnkq * pointsTNKQ) + (tl * pointsTL);
+                }, 0);
+
+                const groupedByChuDe = data.matrix.rows.reduce((acc, row) => {
+                    const chuDe = row[1];
+                    if (!acc[chuDe]) acc[chuDe] = [];
+                    acc[chuDe].push(row);
+                    return acc;
+                }, {});
+
+                let matrixBodyHtml = '<tbody>';
+                Object.values(groupedByChuDe).forEach(rows => {
+                    const rowspan = rows.length;
+                    const chuDePoints = rows.reduce((total, row) => {
+                        const tnkq = (parseInt(row[3]||0) + parseInt(row[5]||0) + parseInt(row[7]||0) + parseInt(row[9]||0));
+                        const tl = (parseInt(row[4]||0) + parseInt(row[6]||0) + parseInt(row[8]||0) + parseInt(row[10]||0));
+                        return total + (tnkq * pointsTNKQ) + (tl * pointsTL);
+                    }, 0);
+                    const chuDePercentage = totalMatrixPoints > 0 ? (chuDePoints / totalMatrixPoints * 100).toFixed(0) : 0;
+
+                    rows.forEach((row, rowIndex) => {
+                        matrixBodyHtml += '<tr>';
+                        matrixBodyHtml += `<td>${row[0]}</td>`;
+                        if (rowIndex === 0) {
+                            matrixBodyHtml += `<td class="text-left" rowspan="${rowspan}">${row[1]}</td>`;
+                        }
+                        matrixBodyHtml += `<td class="text-left">${row[2]}</td>`;
+
+                        for (let k = 3; k <= 10; k++) {
+                            const cau = parseInt(row[k] || 0);
+                            const isTNKQ = k % 2 !== 0;
+                            const diem = cau * (isTNKQ ? pointsTNKQ : pointsTL);
+                            matrixBodyHtml += `<td>${cau > 0 ? `${cau} câu-${formatDiem(diem)}đ` : ''}</td>`;
+                        }
+
+                        if (rowIndex === 0) {
+                            matrixBodyHtml += `<td rowspan="${rowspan}">${chuDePercentage}%</td>`;
+                        }
+                        matrixBodyHtml += '</tr>';
+                    });
+                });
+                matrixBodyHtml += '</tbody>';
+
+                // Matrix Footer Calculations
+                const totals = { cau: Array(11).fill(0), diem: Array(11).fill(0) };
+                data.matrix.rows.forEach(row => {
+                    for (let i = 3; i <= 10; i++) {
+                        const cau = parseInt(row[i] || 0);
+                        const isTNKQ = i % 2 !== 0;
+                        totals.cau[i] += cau;
+                        totals.diem[i] += cau * (isTNKQ ? pointsTNKQ : pointsTL);
+                    }
+                });
+                const nb_diem = totals.diem[3] + totals.diem[4];
+                const th_diem = totals.diem[5] + totals.diem[6];
+                const vd_diem = totals.diem[7] + totals.diem[8];
+                const vdc_diem = totals.diem[9] + totals.diem[10];
+
+                const nb_percent = totalMatrixPoints > 0 ? (nb_diem / totalMatrixPoints * 100).toFixed(0) : 0;
+                const th_percent = totalMatrixPoints > 0 ? (th_diem / totalMatrixPoints * 100).toFixed(0) : 0;
+                const vd_percent = totalMatrixPoints > 0 ? (vd_diem / totalMatrixPoints * 100).toFixed(0) : 0;
+                const vdc_percent = totalMatrixPoints > 0 ? (vdc_diem / totalMatrixPoints * 100).toFixed(0) : 0;
+
+                const nb_th_percent = parseInt(nb_percent) + parseInt(th_percent);
+                const vd_vdc_percent = parseInt(vd_percent) + parseInt(vdc_percent);
+
+                let matrixFooterHtml = `
+                    <tfoot>
+                        <tr>
+                            <td colspan="3"><b>Tổng</b></td>
+                            <td colspan="2"><b>${totals.cau[3] + totals.cau[4]} câu - ${formatDiem(nb_diem)}đ</b></td>
+                            <td colspan="2"><b>${totals.cau[5] + totals.cau[6]} câu - ${formatDiem(th_diem)}đ</b></td>
+                            <td colspan="2"><b>${totals.cau[7] + totals.cau[8]} câu - ${formatDiem(vd_diem)}đ</b></td>
+                            <td colspan="2"><b>${totals.cau[9] + totals.cau[10]} câu - ${formatDiem(vdc_diem)}đ</b></td>
+                            <td><b>100%</b></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3"><b>Tỉ lệ %</b></td>
+                            <td colspan="2"><b>${nb_percent}%</b></td>
+                            <td colspan="2"><b>${th_percent}%</b></td>
+                            <td colspan="2"><b>${vd_percent}%</b></td>
+                            <td colspan="2"><b>${vdc_percent}%</b></td>
+                            <td></td>
+                        </tr>
+                        <tr>
+                            <td colspan="3"><b>Tỉ lệ chung</b></td>
+                            <td colspan="4"><b>${nb_th_percent}%</b></td>
+                            <td colspan="4"><b>${vd_vdc_percent}%</b></td>
+                            <td></td>
+                        </tr>
+                    </tfoot>`;
+
+                let matrixTableHtml = `
+                    <div class="page-break">
+                        <table>
+                            <caption>${matrixTitle}</caption>
+                            <thead>
+                                <tr>
+                                    <th rowspan="3" style="width: 4%;">TT</th>
+                                    <th rowspan="3" style="width: 15%;">Chương/Chủ đề</th>
+                                    <th rowspan="3" style="width: 25%;">Nội dung/Đơn vị kiến thức</th>
+                                    <th colspan="8">Mức độ nhận thức</th>
+                                    <th rowspan="3" style="width: 8%;">Tổng % điểm</th>
+                                </tr>
+                                <tr>
+                                    <th colspan="2">Nhận biết</th>
+                                    <th colspan="2">Thông hiểu</th>
+                                    <th colspan="2">Vận dụng</th>
+                                    <th colspan="2">Vận dụng cao</th>
+                                </tr>
+                                <tr>
+                                    <th>TNKQ</th>
+                                    <th>TL</th>
+                                    <th>TNKQ</th>
+                                    <th>TL</th>
+                                    <th>TNKQ</th>
+                                    <th>TL</th>
+                                    <th>TNKQ</th>
+                                    <th>TL</th>
+                                </tr>
+                            </thead>
+                            <tbody>${matrixBodyHtml}</tbody>
+                            ${matrixFooterHtml}
+                        </table>
+                    </div>`;
+
+                // --- PAGE 2: BẢNG ĐẶC TẢ ---
+                const specChuDeRowspanMap = data.specifications.rows.reduce((acc, row) => {
+                    const chuDe = row[1]; acc[chuDe] = (acc[chuDe] || 0) + 1; return acc;
+                }, {});
+
+                let specBodyHtml = '<tbody>';
+                let lastSpecChuDe = null;
+                data.specifications.rows.forEach(row => {
+                    const [stt, chuDe, noiDung, mucDo, nb_raw, th_raw, vd_raw, vdc_raw] = row;
+                    const nb_cau = parseInt((nb_raw || '0-0').split('-')[0], 10) || 0;
+                    const th_cau = parseInt((th_raw || '0-0').split('-')[0], 10) || 0;
+                    const vd_cau = parseInt((vd_raw || '0-0').split('-')[1], 10) || 0;
+                    const vdc_cau = parseInt((vdc_raw || '0-0').split('-')[1], 10) || 0;
+
+                    specBodyHtml += '<tr>';
+                    specBodyHtml += `<td>${stt}</td>`;
+                    if (chuDe !== lastSpecChuDe) {
+                        specBodyHtml += `<td class="text-left" rowspan="${specChuDeRowspanMap[chuDe]}">${chuDe}</td>`;
+                        lastSpecChuDe = chuDe;
+                    }
+                    specBodyHtml += `<td class="text-left">${noiDung}</td>`;
+                    specBodyHtml += `<td class="muc-do-danh-gia">${mucDo}</td>`;
+                    specBodyHtml += `<td>${nb_cau > 0 ? `${nb_cau}(TN)` : ''}</td>`;
+                    specBodyHtml += `<td>${th_cau > 0 ? `${th_cau}(TN)` : ''}</td>`;
+                    specBodyHtml += `<td>${vd_cau > 0 ? `${vd_cau}(TL)` : ''}</td>`;
+                    specBodyHtml += `<td>${vdc_cau > 0 ? `${vdc_cau}(TL)` : ''}</td>`;
+                    specBodyHtml += '</tr>';
+                });
+                specBodyHtml += '</tbody>';
+                
+                let totalNB_spec=0, totalTH_spec=0, totalVD_spec=0, totalVDC_spec=0;
+                data.specifications.rows.forEach(r => {
+                    totalNB_spec += parseInt((r[4] || '0-0').split('-')[0],10)||0;
+                    totalTH_spec += parseInt((r[5] || '0-0').split('-')[0],10)||0;
+                    totalVD_spec += parseInt((r[6] || '0-0').split('-')[1],10)||0;
+                    totalVDC_spec += parseInt((r[7] || '0-0').split('-')[1],10)||0;
+                });
+                const totalSpecPoints = (totalNB_spec + totalTH_spec) * pointsTNKQ + (totalVD_spec + totalVDC_spec) * pointsTL;
+                const spec_nb_percent = totalSpecPoints > 0 ? (((totalNB_spec*pointsTNKQ)/totalSpecPoints)*100).toFixed(0) : 0;
+                const spec_th_percent = totalSpecPoints > 0 ? (((totalTH_spec*pointsTNKQ)/totalSpecPoints)*100).toFixed(0) : 0;
+                const spec_vd_percent = totalSpecPoints > 0 ? (((totalVD_spec*pointsTL)/totalSpecPoints)*100).toFixed(0) : 0;
+                const spec_vdc_percent = totalSpecPoints > 0 ? (((totalVDC_spec*pointsTL)/totalSpecPoints)*100).toFixed(0) : 0;
+                const spec_nb_th_percent = parseInt(spec_nb_percent) + parseInt(spec_th_percent);
+                const spec_vd_vdc_percent = parseInt(spec_vd_percent) + parseInt(spec_vdc_percent);
+
+                let specFooterHtml = `
+                    <tfoot>
+                        <tr>
+                            <td colspan="4" class="text-left"><b>Tổng</b></td>
+                            <td><b>${totalNB_spec}</b></td><td><b>${totalTH_spec}</b></td>
+                            <td><b>${totalVD_spec}</b></td><td><b>${totalVDC_spec}</b></td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="text-left"><b>Tỉ lệ %</b></td>
+                            <td><b>${spec_nb_percent}%</b></td><td><b>${spec_th_percent}%</b></td>
+                            <td><b>${spec_vd_percent}%</b></td><td><b>${spec_vdc_percent}%</b></td>
+                        </tr>
+                        <tr>
+                            <td colspan="4" class="text-left"><b>Tỉ lệ chung</b></td>
+                            <td colspan="2"><b>${spec_nb_th_percent}%</b></td>
+                            <td colspan="2"><b>${spec_vd_vdc_percent}%</b></td>
+                        </tr>
+                    </tfoot>`;
+
+                let specTableHtml = `
+                    <table>
+                        <caption>${specTitle}</caption>
+                        <thead>
+                            <tr>
+                                <th rowspan="2" style="width: 3%;">TT</th><th rowspan="2" style="width: 15%;">Chương/Chủ đề</th>
+                                <th rowspan="2" style="width: 17%;">Nội dung/Đơn vị kiến thức</th><th rowspan="2">Mức độ đánh giá</th>
+                                <th colspan="4" style="width: 20%;">Số câu hỏi theo mức độ nhận thức</th>
+                            </tr>
+                            <tr>
+                                <th>Nhận biết</th><th>Thông hiểu</th><th>Vận dụng</th><th>Vận dụng cao</th>
+                            </tr>
+                        </thead>
+                        <tbody>${specBodyHtml}</tbody>
+                        ${specFooterHtml}
+                    </table>`;
+
+                return `
+                    <!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>Bản in ma trận</title>${css}</head>
+                    <body>${matrixTableHtml}${specTableHtml}</body></html>
+                `;
+            };
+
+            const updateMatrixFromTopicFolder = (loaiDeDir, topicFolder) => {
+                if (!loaiDeDir || !topicFolder || !loaiDeDir.matrixData) {
+                    console.error("Không thể cập nhật ma trận: Thiếu thư mục hoặc dữ liệu ma trận.");
+                    return;
+                }
+
+                const totalCounts = {
+                    NB: { TN: 0, TL: 0 }, TH: { TN: 0, TL: 0 },
+                    VD: { TN: 0, TL: 0 }, VDC: { TN: 0, TL: 0 }
+                };
+
+                const jsonFiles = topicFolder.children.filter(child => child.type === 'file' && child.content);
+
+                jsonFiles.forEach(file => {
+                    const jsonData = file.content;
+                    (jsonData.tracNghiem || []).forEach(q => {
+                        const level = q.mucDo.toUpperCase();
+                        if (totalCounts[level]) totalCounts[level].TN++;
+                    });
+                    (jsonData.tuLuan || []).forEach(q => {
+                        const level = q.mucDo.toUpperCase();
+                        if (totalCounts[level]) totalCounts[level].TL++;
+                    });
+                });
+
+                const rowIndex = loaiDeDir.matrixData.matrix.rows.findIndex(row => row[2] === topicFolder.name);
+
+                if (rowIndex === -1) {
+                    console.warn(`Không tìm thấy chủ đề "${topicFolder.name}" trong ma trận để cập nhật.`);
+                    return;
+                }
+
+                // Cập nhật số lượng câu hỏi có sẵn
+                loaiDeDir.matrixData.availableCounts[rowIndex] = totalCounts;
+                loaiDeDir.matrixData.specifications.rows[rowIndex][4] = `${totalCounts.NB.TN || 0}-${totalCounts.NB.TL || 0}`;
+                loaiDeDir.matrixData.specifications.rows[rowIndex][5] = `${totalCounts.TH.TN || 0}-${totalCounts.TH.TL || 0}`;
+                loaiDeDir.matrixData.specifications.rows[rowIndex][6] = `${totalCounts.VD.TN || 0}-${totalCounts.VD.TL || 0}`;
+                loaiDeDir.matrixData.specifications.rows[rowIndex][7] = `${totalCounts.VDC.TN || 0}-${totalCounts.VDC.TL || 0}`;
+                
+                // Cập nhật bảng ma trận từ số liệu mới
+                updateMatrixFromSpec(rowIndex, loaiDeDir); 
+                
+                // Đã xóa dòng showToast ở đây
+            };
+
+            const makeCellEditable = (cell) => {
+                if (cell.querySelector('input')) return;
+                const originalValue = cell.textContent;
+                const row = parseInt(cell.dataset.row, 10);
+                const col = parseInt(cell.dataset.col, 10);
+                const currentDir = getCurrentDirectory();
+
+                cell.innerHTML = `<input type="number" min="0" value="${originalValue}" />`;
+                const input = cell.querySelector('input');
+                input.focus();
+                input.select();
+
+                // Show tooltip
+                if (currentDir.matrixData.availableCounts && currentDir.matrixData.availableCounts[row]) {
+                    const counts = currentDir.matrixData.availableCounts[row];
+                    let tooltipText = '';
+                    const levelMap = {4: 'NB', 5: 'TH', 6: 'VD', 7: 'VDC'};
+                    const typeMap = {4: 'TN', 5: 'TN', 6: 'TL', 7: 'TL'};
+                    const levelKey = levelMap[col];
+                    const typeKey = typeMap[col];
+
+                    if(levelKey && counts[levelKey]){
+                        tooltipText = `Hiện có: ${counts[levelKey][typeKey]} câu`;
+                    }
+                    
+                    if (tooltipText) {
+                        questionTooltip.textContent = tooltipText;
+                        questionTooltip.classList.remove('hidden');
+                        const cellRect = cell.getBoundingClientRect();
+                        questionTooltip.style.top = `${cellRect.top - questionTooltip.offsetHeight - 5 + window.scrollY}px`;
+                        questionTooltip.style.left = `${cellRect.left + window.scrollX}px`;
+                    }
+                }
+
+                const onBlur = () => {
+                    questionTooltip.classList.add('hidden');
+                    const newValue = parseInt(input.value, 10) || 0;
+                    let isValid = true;
+                    
+                    if (currentDir && currentDir.matrixData && currentDir.matrixData.availableCounts && currentDir.matrixData.availableCounts[row]) {
+                        const counts = currentDir.matrixData.availableCounts[row];
+                        const levelMap = {4: 'NB', 5: 'TH', 6: 'VD', 7: 'VDC'};
+                        const typeMap = {4: 'TN', 5: 'TN', 6: 'TL', 7: 'TL'};
+                        const levelKey = levelMap[col];
+                        const typeKey = typeMap[col];
+                        
+                        if (counts[levelKey] && (newValue > counts[levelKey][typeKey])) {
+                           isValid = false;
+                        }
+                    }
+
+                    if (!isValid) {
+                        showToast("Số câu hỏi vượt quá số lượng có sẵn.");
+                        cell.innerHTML = originalValue;
+                    } else {
+                        cell.innerHTML = newValue;
+                        updateMatrixData(cell, newValue);
+                    }
+                };
+
+                input.addEventListener('blur', onBlur);
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') input.blur();
+                    else if (e.key === 'Escape') {
+                        input.removeEventListener('blur', onBlur); // Prevent saving on escape
+                        cell.innerHTML = originalValue;
+                        questionTooltip.classList.add('hidden');
+                    }
+                });
+            };
+
+            const updateRowTotals = (rowIndex) => {
+                const currentDir = getCurrentDirectory();
+                if (!currentDir || !currentDir.matrixData) return;
+                const rowData = currentDir.matrixData.matrix.rows[rowIndex];
+                let rowTotal = 0;
+                for (let i = 3; i <= 10; i++) {
+                    rowTotal += parseInt(rowData[i], 10) || 0;
+                }
+                rowData[11] = rowTotal;
+            };
+            
+            const updateMatrixFromSpec = (rowIndex, targetDir) => {
+                // The target directory (loaiDeDir) is passed explicitly
+                const directory = targetDir || getCurrentDirectory();
+                if (!directory || !directory.matrixData) return;
+                
+                const specRow = directory.matrixData.specifications.rows[rowIndex];
+                
+                // NB-TNKQ, NB-TL
+                const [nb_tn, nb_tl] = (specRow[4] || '0-0').split('-').map(n => n.trim() || '0');
+                directory.matrixData.matrix.rows[rowIndex][3] = nb_tn;
+                directory.matrixData.matrix.rows[rowIndex][4] = nb_tl;
+
+                // TH-TNKQ, TH-TL
+                const [th_tn, th_tl] = (specRow[5] || '0-0').split('-').map(n => n.trim() || '0');
+                directory.matrixData.matrix.rows[rowIndex][5] = th_tn;
+                directory.matrixData.matrix.rows[rowIndex][6] = th_tl;
+                
+                // VD-TNKQ, VD-TL
+                const [vd_tn, vd_tl] = (specRow[6] || '0-0').split('-').map(n => n.trim() || '0');
+                directory.matrixData.matrix.rows[rowIndex][7] = vd_tn;
+                directory.matrixData.matrix.rows[rowIndex][8] = vd_tl;
+                
+                // VDC-TNKQ, VDC-TL
+                const [vdc_tn, vdc_tl] = (specRow[7] || '0-0').split('-').map(n => n.trim() || '0');
+                directory.matrixData.matrix.rows[rowIndex][9] = vdc_tn;
+                directory.matrixData.matrix.rows[rowIndex][10] = vdc_tl;
+
+                updateRowTotals(rowIndex);
+                // No need to re-render the whole matrix here, as the final render call will do it.
+            }
+
+            const updateMatrixData = (cell, newValue) => {
+                const currentDir = getCurrentDirectory();
+                if (!currentDir || !currentDir.matrixData) return;
+
+                const row = parseInt(cell.dataset.row, 10);
+                const col = parseInt(cell.dataset.col, 10);
+                
+                const specRow = currentDir.matrixData.specifications.rows[row];
+                
+                // Get original values to preserve the other part
+                let [nb_tn, nb_tl]   = (specRow[4] || '0-0').split('-').map(n => n.trim());
+                let [th_tn, th_tl]   = (specRow[5] || '0-0').split('-').map(n => n.trim());
+                let [vd_tn, vd_tl]   = (specRow[6] || '0-0').split('-').map(n => n.trim());
+                let [vdc_tn, vdc_tl] = (specRow[7] || '0-0').split('-').map(n => n.trim());
+
+                if (col === 4) { // NB-TN
+                    currentDir.matrixData.specifications.rows[row][4] = `${newValue}-${nb_tl}`;
+                } else if (col === 5) { // TH-TN
+                    currentDir.matrixData.specifications.rows[row][5] = `${newValue}-${th_tl}`;
+                } else if (col === 6) { // VD-TL
+                    currentDir.matrixData.specifications.rows[row][6] = `${vd_tn}-${newValue}`;
+                } else if (col === 7) { // VDC-TL
+                    currentDir.matrixData.specifications.rows[row][7] = `${vdc_tn}-${newValue}`;
+                }
+
+                updateMatrixFromSpec(row);
+                 // Re-render the matrix to show updated totals immediately
+                renderMatrix(currentDir.matrixData, true);
+            };
+
+            matrixContent.addEventListener('click', (e) => {
+                const cell = e.target.closest('.editable-cell');
+                if (cell) makeCellEditable(cell);
+                
+                const deleteBtn = e.target.closest('.delete-row-btn'); 
+                if (deleteBtn) { 
+                    const indexToDelete = parseInt(deleteBtn.dataset.index, 10); 
+                    if (!isNaN(indexToDelete)) handleDeleteRow(indexToDelete); 
+                }
+            });
+
+
+            fileExplorer.addEventListener('click', (e) => {
+                const checkbox = e.target.closest('.item-checkbox');
+                if (checkbox) {
+                    const name = checkbox.dataset.name;
+                    if (checkbox.checked) {
+                        if (!selectedItems.includes(name)) selectedItems.push(name);
+                    } else {
+                        selectedItems = selectedItems.filter(item => item !== name);
+                    }
+                    render();
+                    updateActionToolbar();
+                }
+            });
+            
+            createInitialFolderBtn.addEventListener('click', handleCreateFolderClick);
+            cancelFolderBtn.addEventListener('click', closeFolderModal);
+            
+            renameBtn.addEventListener('click', handleRenameClick);
+            deleteBtn.addEventListener('click', handleDeleteClick);
+            copyBtn.addEventListener('click', handleCopyClick);
+            pasteBtn.addEventListener('click', handlePasteClick);
+
+
+            cancelConfirmBtn.addEventListener('click', hideConfirmModal);
+            confirmActionBtn.addEventListener('click', () => { if(confirmCallback) confirmCallback(); });
+
+            breadcrumbs.addEventListener('click', (e) => { if (e.target.tagName === 'A') { e.preventDefault(); clearSelection(); const pathIndex = parseInt(e.target.dataset.pathIndex, 10); currentPath = (pathIndex === -1) ? [] : currentPath.slice(0, pathIndex + 1); render(); } });
+            
+            uploadBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (e) => {
+                const files = e.target.files;
+                if (!files.length) return;
+                 if (currentPath.length < 2) {
+                    showToast("Vui lòng vào một thư mục chủ đề trước khi tải lên tệp JSON.");
+                    return;
+                }
+
+                const filePromises = Array.from(files).map(file => {
+                    return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            try {
+                                const data = JSON.parse(event.target.result);
+                                if (!data.thongTinChung || (!data.thongTinChung.bai) || (!data.tracNghiem && !data.tuLuan) ) {
+                                    throw new Error("Cấu trúc không hợp lệ hoặc thiếu thuộc tính 'bai'");
+                                }
+                                // Giữ lại tên tệp gốc
+                                resolve({ name: file.name, content: data, status: 'fulfilled' });
+                            } catch (err) {
+                                showToast(`Lỗi tệp JSON "${file.name}": ${err.message}`);
+                                resolve({ name: file.name, status: 'rejected' });
+                            }
+                        };
+                        reader.readAsText(file);
+                    });
+                });
+
+                Promise.all(filePromises).then(results => {
+                    const currentTopicDir = getCurrentDirectory(); // Đây là thư mục chủ đề
+                    let filesProcessed = false;
+                    
+                    results.forEach(result => {
+                        if (result.status === 'fulfilled') {
+                            const existingFile = currentTopicDir.children.find(c => c.name === result.name && c.type === 'file');
+
+                            if (!existingFile) {
+                                const newFile = { name: result.name, type: 'file', content: result.content };
+                                currentTopicDir.children.push(newFile);
+                            } else {
+                                existingFile.content = result.content;
+                            }
+                            filesProcessed = true;
+                        }
+                    });
+
+                    if (filesProcessed) {
+                        const loaiDePath = [currentPath[0]];
+                        const loaiDeDir = findDirectory(loaiDePath);
+                        // Tổng hợp lại tất cả các tệp trong thư mục và cập nhật ma trận
+                        updateMatrixFromTopicFolder(loaiDeDir, currentTopicDir);
+                        
+                        // Sau khi xử lý, quay lại một cấp và vẽ lại để hiển thị ma trận đã cập nhật
+                        currentPath.pop();
+                        render();
+                    }
+                });
+
+                e.target.value = null; // Đặt lại input tệp
+             });
+            
+            printBtn.addEventListener('click', () => {
+                const currentDir = getCurrentDirectory();
+                if (currentDir && currentDir.matrixData) {
+                    const printHtml = generatePrintHTML(currentDir.matrixData);
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(printHtml);
+                    printWindow.document.close();
+                    printWindow.focus(); // Cần thiết cho một số trình duyệt
+                    setTimeout(() => { // Timeout đảm bảo nội dung được tải trước khi hộp thoại in xuất hiện
+                        printWindow.print();
+                        printWindow.close();
+                    }, 500);
+                } else {
+                    showToast("Không có dữ liệu ma trận để in.");
+                }
+            });
+
+            // Initial Render
+            render();
+        });
+    </script>
+</body>
+</html>
+
+
+
+
+
