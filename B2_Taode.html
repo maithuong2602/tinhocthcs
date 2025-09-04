@@ -3,119 +3,231 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trình Tạo Đề Thi Theo Ma Trận</title>
+    <title>Trình Tạo Đề Thi Theo Ma Trận | Công Cụ Quản Lý Đề Thi</title>
+    <!-- Thêm thư viện Font Awesome để sử dụng icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+        /* --- HỆ THỐNG THIẾT KẾ ĐỒNG BỘ --- */
         :root {
-            --primary-color: #007bff; --secondary-color: #6c757d; --success-color: #28a745;
-            --danger-color: #dc3545; --info-color: #17a2b8; --warning-color: #ffc107;
-            --light-gray: #f8f9fa; --font-family: 'Roboto', sans-serif;
+            --primary-color: #0056b3;
+            --primary-color-light: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #198754;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --info-color: #0dcaf0;
+            --background-color: #f4f7fa;
+            --card-background: #ffffff;
+            --text-color: #212529;
+            --border-color: #dee2e6;
+            --shadow-color: rgba(0, 0, 0, 0.08);
+            --font-family: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
         }
-        body { font-family: var(--font-family); background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: 0 auto; background-color: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); }
-        h1, h2, h3 { text-align: center; color: var(--primary-color); }
-        h2, h3 { color: #333; margin-top: 1.5em; margin-bottom: 1em;}
+
+        @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-family);
+            background: var(--background-color);
+            color: var(--text-color);
+            font-size: 16px;
+        }
+
+        .page-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            color: var(--primary-color);
+        }
+        .header p {
+            font-size: 1.1em;
+            color: var(--secondary-color);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
         .app-view { display: none; }
-        .app-view.active { display: block; }
-        .upload-section { text-align: center; padding: 30px; border: 2px dashed #ccc; border-radius: 8px; background-color: #fafafa; }
-        .action-button { color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 1em; font-weight: 500; transition: all 0.2s ease; }
-        .action-button:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .upload-button { background-color: var(--secondary-color); }
-        #fileInput { display: none; }
-        .summary-box { padding: 15px; background-color: #eef2fa; border-left: 5px solid var(--secondary-color); margin-bottom: 25px; border-radius: 5px; }
-        .matrix-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .matrix-table th, .matrix-table td { border: 1px solid #dee2e6; padding: 12px; text-align: center; }
-        .matrix-table th { background-color: var(--light-gray); }
-        .matrix-table .lesson-name { text-align: left; font-weight: 500; }
-        .matrix-table input[type="number"] { width: 60px; text-align: center; padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
-        .matrix-table .available-count { font-size: 0.8em; color: #888; }
-        .generate-button { background-color: var(--success-color); display: block; width: 100%; margin-top: 20px; }
-        .review-question { background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
-        .review-question .content { flex-grow: 1; white-space: pre-wrap; }
-        .review-question .actions { display: flex; align-items: center; gap: 15px; flex-shrink: 0; margin-left: 15px; }
-        .review-question .point-selector select { padding: 5px; border-radius: 4px; border: 1px solid #ccc; }
-        .review-question .swap-button { background: none; border: 1px solid var(--primary-color); color: var(--primary-color); border-radius: 5px; padding: 5px 10px; cursor: pointer; }
-        .export-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: center; gap: 15px; }
-        .bulk-point-setter { margin-bottom: 20px; padding: 15px; background-color: var(--light-gray); border-radius: 8px; text-align: right; }
-        .bulk-point-setter input { width: 70px; margin: 0 10px; padding: 5px; }
-        .bulk-point-setter button { padding: 5px 10px; font-size: 0.9em; }
+        .app-view.active { display: block; animation: fadeIn 0.5s ease-out; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* --- CARD STYLE --- */
+        .card {
+            background: var(--card-background);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 15px var(--shadow-color);
+        }
+        .card-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
         
-        /* Modal Styles */
-        .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; }
-        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .modal-form-group { margin-bottom: 15px; }
-        .modal-form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
-        .modal-form-group input { width: 100%; padding: 10px; border-radius: 4px; border: 1px solid #ccc; box-sizing: border-box; }
-        .modal-footer { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+        /* --- BUTTON SYSTEM --- */
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: 500; font-family: var(--font-family); transition: transform 0.2s ease, filter 0.2s ease; }
+        .btn:hover { transform: translateY(-2px); filter: brightness(0.95); }
+        .btn.btn-lg { padding: 15px 30px; font-size: 1.1rem; }
+        .btn-primary { background-color: var(--primary-color); color: white; }
+        .btn-secondary { background-color: var(--secondary-color); color: white; }
+        .btn-success { background-color: var(--success-color); color: white; }
+        .btn-info { background-color: var(--info-color); color: var(--text-color); }
+        .btn-outline-primary { background: none; border: 1px solid var(--primary-color); color: var(--primary-color); }
+
+        /* --- UPLOAD VIEW --- */
+        .upload-section { text-align: center; padding: 40px; border: 2px dashed var(--border-color); border-radius: 12px; background-color: #fafcff; }
+        .upload-section p { margin: 10px 0 20px; }
+        #fileInput { display: none; }
+
+        /* --- CONFIG VIEW --- */
+        .summary-box { padding: 20px; background-color: #e9f5ff; border-left: 5px solid var(--primary-color-light); margin-bottom: 25px; border-radius: 8px; }
+        .matrix-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .matrix-table th, .matrix-table td { border: 1px solid var(--border-color); padding: 12px; text-align: center; }
+        .matrix-table th { background-color: #f8f9fa; font-weight: 500; }
+        .matrix-table .lesson-name { text-align: left; font-weight: 500; }
+        .matrix-table input[type="number"] { width: 60px; text-align: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; }
+        .matrix-table .available-count { font-size: 0.85em; color: var(--secondary-color); margin-top: 4px;}
+
+        /* --- REVIEW VIEW --- */
+        .bulk-point-setter { margin-bottom: 20px; padding: 20px; background-color: #f8f9fa; border-radius: 8px; display: flex; justify-content: flex-end; align-items: center; gap: 10px; }
+        .bulk-point-setter input { width: 80px; padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); }
+        .review-question { background-color: #fff; border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; gap: 15px; }
+        .review-question .content { flex-grow: 1; white-space: pre-wrap; line-height: 1.6; }
+        .review-question .actions { display: flex; align-items: center; gap: 15px; flex-shrink: 0; }
+        .review-question .point-selector select { padding: 8px; border-radius: 6px; border: 1px solid var(--border-color); }
+        .export-section { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; }
+        
+        /* --- MODAL --- */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(5px); display: none; align-items: center; justify-content: center; }
+        .modal.is-visible { display: flex; }
+        .modal-content { background-color: var(--card-background); margin: auto; padding: 30px; border: none; width: 90%; max-width: 600px; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); animation: fadeIn 0.3s ease-out; }
+        .modal-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; color: var(--primary-color); font-size: 1.5rem; font-weight: 700; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 500; }
+        .form-group input { width: 100%; padding: 12px 15px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; }
+        .modal-footer { margin-top: 30px; display: flex; justify-content: flex-end; gap: 10px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Trình Tạo Đề Thi Theo Ma Trận</h1>
-        <div id="uploadView" class="app-view active">
+    <div class="page-wrapper">
+        <header class="header">
+            <h1><i class="fa-solid fa-wand-magic-sparkles"></i> Trình Tạo Đề Thi Theo Ma Trận</h1>
+            <p>Tự động hóa việc tạo đề thi từ ngân hàng câu hỏi và ma trận tùy chỉnh của bạn.</p>
+        </header>
+
+        <div id="uploadView" class="app-view active card">
+            <h2 class="card-title"><i class="fa-solid fa-1"></i> Bước 1: Tải lên Ngân hàng câu hỏi</h2>
             <div class="upload-section">
-                <h3>Bước 1: Tải lên Ngân hàng câu hỏi</h3>
-                <p>Chọn một hoặc nhiều file JSON chứa câu hỏi của bạn.</p>
+                <p>Chọn một hoặc nhiều file JSON chứa câu hỏi của bạn để bắt đầu.</p>
                 <input type="file" id="fileInput" accept=".json" multiple>
-                <button class="action-button upload-button" id="uploadButton">Chọn File JSON</button>
+                <button class="btn btn-primary btn-lg" id="uploadButton"><i class="fa-solid fa-upload"></i> Chọn File JSON</button>
             </div>
         </div>
-        <div id="configView" class="app-view">
-            <h3>Bước 2: Xây dựng Ma trận Đề thi</h3>
+
+        <div id="configView" class="app-view card">
+            <h2 class="card-title"><i class="fa-solid fa-2"></i> Bước 2: Xây dựng Ma trận Đề thi</h2>
             <div id="configSummary" class="summary-box"></div>
             <table class="matrix-table" id="matrixTable">
                 <thead><tr><th>Bài học</th><th>NB</th><th>TH</th><th>VD</th><th>VDC</th></tr></thead>
                 <tbody></tbody>
             </table>
-            <button id="generateTestButton" class="action-button generate-button">Tạo Đề thi Ngẫu nhiên</button>
+            <button id="generateTestButton" class="btn btn-success btn-lg" style="width: 100%; margin-top: 30px;"><i class="fa-solid fa-cogs"></i> Tạo Đề thi Ngẫu nhiên</button>
         </div>
-        <div id="reviewView" class="app-view">
-            <h3>Bước 3: Rà soát và Xuất bản</h3>
+
+        <div id="reviewView" class="app-view card">
+            <h2 class="card-title"><i class="fa-solid fa-3"></i> Bước 3: Rà soát và Xuất bản</h2>
             <div class="bulk-point-setter">
-                <span>Điểm chung cho mỗi câu:</span>
+                <label for="bulk-points-input"><strong>Điểm chung cho mỗi câu:</strong></label>
                 <input type="number" id="bulk-points-input" step="0.25" value="0.25">
-                <button id="apply-bulk-points-btn" class="action-button" style="background-color: var(--secondary-color);">Áp dụng cho tất cả</button>
+                <button id="apply-bulk-points-btn" class="btn btn-secondary"><i class="fa-solid fa-check-double"></i> Áp dụng cho tất cả</button>
             </div>
             <div id="review-question-bank"></div>
             <div class="export-section">
-                <button id="exportWordAzotaButton" class="action-button" style="background-color: var(--info-color);">Xuất Word (AZota)</button>
-                <button id="exportWordTestButton" class="action-button" style="background-color: var(--primary-color);">Xuất Word (Đề thi)</button>
+                <button id="exportWordAzotaButton" class="btn btn-info"><i class="fa-solid fa-file-word"></i> Xuất Word (AZota)</button>
+                <button id="exportWordTestButton" class="btn btn-primary"><i class="fa-solid fa-file-word"></i> Xuất Word (Đề thi)</button>
             </div>
         </div>
     </div>
 
-    <div id="headerModal" class="modal-backdrop">
+    <!-- Modal Nhập Tiêu Đề -->
+    <div id="headerModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header"><h3>Nhập thông tin tiêu đề</h3></div>
-            <div class="modal-form-group">
+            <div class="modal-header"><i class="fa-solid fa-pen-to-square"></i><h3>Nhập thông tin tiêu đề</h3></div>
+            <div class="form-group">
                 <label for="donVi">Đơn vị chủ quản</label>
                 <input type="text" id="donVi" value="UBND PHƯỜNG HẢI CHÂU">
             </div>
-            <div class="modal-form-group">
+            <div class="form-group">
                 <label for="tenTruong">Tên trường</label>
                 <input type="text" id="tenTruong" value="TRƯỜNG TRUNG HỌC CƠ SỞ LÊ THÁNH TÔN">
             </div>
-             <div class="modal-form-group">
+            <div class="form-group">
                 <label for="tenKyThi">Tên kỳ thi</label>
                 <input type="text" id="tenKyThi" value="KIỂM TRA CUỐI KÌ II NĂM HỌC 2024 - 2025">
             </div>
-             <div class="modal-form-group">
+            <div class="form-group">
                 <label for="monHoc">Môn học</label>
                 <input type="text" id="monHoc" value="Tin học 6">
             </div>
-             <div class="modal-form-group">
+            <div class="form-group">
                 <label for="thoiGian">Thời gian làm bài</label>
                 <input type="text" id="thoiGian" value="45 phút">
             </div>
             <div class="modal-footer">
-                <button id="cancelHeaderBtn" class="action-button" style="background-color: var(--secondary-color);">Huỷ</button>
-                <button id="confirmHeaderBtn" class="action-button" style="background-color: var(--success-color);">Xác Nhận & Xuất</button>
+                <button id="cancelHeaderBtn" class="btn btn-secondary">Huỷ</button>
+                <button id="confirmHeaderBtn" class="btn btn-success">Xác Nhận & Xuất</button>
             </div>
         </div>
     </div>
+    
+     <!-- Modal thông báo tùy chỉnh -->
+    <div id="alert-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px; text-align: center;">
+            <div class="modal-header" style="justify-content: center; border-bottom: none;">
+                <h2 id="alert-modal-title">Thông báo</h2>
+            </div>
+            <p id="alert-modal-message" style="margin-bottom: 20px; font-size: 1.1rem; white-space: pre-wrap;"></p>
+            <button class="btn btn-primary" onclick="closeAlertModal()" style="width: auto; min-width: 100px;">OK</button>
+        </div>
+    </div>
+
 
     <script>
+        // --- CUSTOM ALERT MODAL ---
+        function showAlert(message, title = "Thông báo") {
+            document.getElementById('alert-modal-title').textContent = title;
+            document.getElementById('alert-modal-message').textContent = message;
+            document.getElementById('alert-modal').classList.add('is-visible');
+        }
+
+        function closeAlertModal() {
+            document.getElementById('alert-modal').classList.remove('is-visible');
+        }
+
+
         const TestGeneratorApp = {
             state: {
                 allQuestions: [],
@@ -153,8 +265,9 @@
                 this.dom.confirmHeaderBtn.addEventListener('click', () => this.exportTest('test'));
 
                 this.dom.reviewQuestionBank.addEventListener('click', (event) => {
-                    if (event.target && event.target.classList.contains('swap-button')) {
-                        const uniqueId = event.target.dataset.id;
+                    const swapButton = event.target.closest('.swap-button');
+                    if (swapButton) {
+                        const uniqueId = swapButton.dataset.id;
                         this.swapQuestion(uniqueId);
                     }
                 });
@@ -168,17 +281,17 @@
             },
 
             openHeaderModal() {
-                 if (this.state.generatedTest.length === 0) return alert('Chưa có đề thi nào được tạo để xuất file.');
-                 this.dom.headerModal.style.display = 'flex';
+                if (this.state.generatedTest.length === 0) return showAlert('Chưa có đề thi nào được tạo để xuất file.');
+                this.dom.headerModal.classList.add('is-visible');
             },
 
             closeHeaderModal() {
-                this.dom.headerModal.style.display = 'none';
+                this.dom.headerModal.classList.remove('is-visible');
             },
             
             applyBulkPoints() {
                 const points = parseFloat(this.dom.bulkPointsInput.value);
-                if (isNaN(points) || points < 0) return alert('Vui lòng nhập một số điểm hợp lệ.');
+                if (isNaN(points) || points < 0) return showAlert('Vui lòng nhập một số điểm hợp lệ.');
                 this.state.generatedTest.forEach(q => q.points = points);
                 this.render();
             },
@@ -253,7 +366,7 @@
                         const count = this.state.testMatrix[bai][level];
                         if (count > 0) {
                             let pool = this.state.allQuestions.filter(q => q.bai === bai && q.mucDo === level);
-                            if (count > pool.length) return alert(`Lỗi: Yêu cầu ${count} câu ${level} từ "${bai}" nhưng chỉ có ${pool.length} câu.`);
+                            if (count > pool.length) return showAlert(`Lỗi: Yêu cầu ${count} câu ${level} từ "${bai}" nhưng chỉ có ${pool.length} câu.`);
                             
                             const byType = pool.reduce((acc, q) => { (acc[q.loai] = acc[q.loai] || []).push(q); return acc; }, {});
                             let selected = [];
@@ -287,12 +400,12 @@
                     this.state.generatedTest[indexToSwap] = { ...pool[Math.floor(Math.random() * pool.length)], points: qToSwap.points };
                     this.render();
                 } else {
-                    alert(`Không còn câu hỏi nào khác cùng bài "${qToSwap.bai}" và mức độ "${qToSwap.mucDo}" để đổi.`);
+                    showAlert(`Không còn câu hỏi nào khác cùng bài "${qToSwap.bai}" và mức độ "${qToSwap.mucDo}" để đổi.`);
                 }
             },
             
             exportTest(type) {
-                if (this.state.generatedTest.length === 0) return alert('Chưa có đề thi nào được tạo để xuất file.');
+                if (this.state.generatedTest.length === 0) return showAlert('Chưa có đề thi nào được tạo để xuất file.');
                 const generator = type === 'azota' ? this.generateWordAota : this.generateWordTest;
                 const { html, filename } = generator.call(this, this.state.generatedTest);
                 this.triggerDownload(html, filename);
@@ -329,7 +442,7 @@
                                 <div class="point-selector">
                                     <select class="points-dropdown" data-id="${q.uniqueId}">${optionsHtml}</select>
                                 </div>
-                                <button class="swap-button" data-id="${q.uniqueId}">🔄 Đổi câu</button>
+                                <button class="btn btn-outline-primary swap-button" data-id="${q.uniqueId}"><i class="fa-solid fa-arrows-rotate"></i> Đổi</button>
                             </div>
                         </div>`;
                     }).join('');
@@ -391,7 +504,7 @@
                 const totalPoints = questions.reduce((sum, q) => sum + (q.points || 0), 0);
                 let tracNghiemCount = questions.filter(q => q.loai !== 'situation').length;
                 let answerGridHtml = `<p style="text-align: left; font-style: italic; margin-top: 6pt; margin-bottom: 0;">- Em hãy điền đáp án vào khung bên dưới cho câu trả lời đúng: (mỗi câu đúng ${(totalPoints/tracNghiemCount).toFixed(2)} điểm)</p>
-                                      <table style="width:100%; border-collapse: collapse; margin: 10pt 0;">`;
+                                        <table style="width:100%; border-collapse: collapse; margin: 10pt 0;">`;
                 const cols = 12;
                 const rows = Math.ceil(tracNghiemCount / cols);
                 for (let i = 0; i < rows; i++) {
@@ -406,7 +519,7 @@
                 let questionContent = questions.map((q, index) => {
                     let questionHtml = `<p style="margin-top: 6pt; margin-bottom: 0;"><strong>Câu ${index + 1} (${(q.points || 0).toFixed(2)} điểm):</strong> ${q.noiDung}</p>`;
                     if (q.luaChon && q.luaChon.length > 0) {
-                         const optionsHtml = q.luaChon.map((opt, i) => {
+                        const optionsHtml = q.luaChon.map((opt, i) => {
                             const checkbox = `<span style="display: inline-block; width: 35px; text-align: center; border: 1px solid #000; margin-right: 8px; vertical-align: -5px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>`;
                             const prefix = q.loai === 'multiple-answer' ? checkbox : `${String.fromCharCode(65 + i)}.`;
                             return `<div style="margin-left: 20px;">${prefix} ${opt.text}</div>`;
@@ -428,7 +541,7 @@
             
             generateAnswerKeyHtml(questions, type) {
                 let keyHtml = `<div style="font-family: Times New Roman, serif; font-size: 14pt; margin: 0 auto; max-width: 800px; page-break-before: always;"><h1 style="text-align: center;">${type === 'azota' ? 'ANSWER KEYS' : 'Bảng đáp án'}</h1></div>
-                               <div style="font-family: Times New Roman, serif; font-size: 12pt; margin: 0 auto; max-width: 800px;">`;
+                                <div style="font-family: Times New Roman, serif; font-size: 12pt; margin: 0 auto; max-width: 800px;">`;
                 let answers = ``;
                 questions.forEach((q, index) => {
                     const num = index + 1;
@@ -463,4 +576,6 @@
         TestGeneratorApp.init();
     </script>
 </body>
+
 </html>
+
