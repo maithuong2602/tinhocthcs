@@ -90,7 +90,20 @@
             opacity: 1;
             visibility: visible;
         }
-        /* Bỏ khối @media print cũ vì sẽ dùng cách tiếp cận mới */
+        .editable-percentage {
+            cursor: pointer;
+        }
+        .editable-percentage:hover {
+            background-color: #f0f9ff;
+        }
+        .percentage-input {
+            width: 100%;
+            text-align: right;
+            border: none;
+            background-color: transparent;
+            outline: none;
+            padding-right: 4px;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
@@ -135,22 +148,6 @@
             <ol id="breadcrumbs" class="flex items-center text-sm font-medium text-slate-600 space-x-2"></ol>
         </nav>
         
-        <!-- Matrix Display Area -->
-        <div id="matrix-container" class="hidden mb-8">
-            <div class="bg-white p-6 rounded-xl shadow-md">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold text-slate-900">Ma trận đặc tả đề kiểm tra</h2>
-                    <button id="print-btn" class="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
-                        In ra Word
-                    </button>
-                </div>
-                <div id="matrix-content" class="space-y-6 overflow-x-auto">
-                    <!-- Tables will be injected here by JS -->
-                </div>
-            </div>
-        </div>
-        
         <!-- File & Folder list -->
         <div id="file-explorer" class="bg-white p-4 sm:p-6 rounded-xl shadow-md min-h-[400px]">
             <div id="file-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -167,6 +164,29 @@
             </div>
         </div>
 
+        <!-- Matrix Display Area -->
+        <div id="matrix-container" class="hidden mb-8">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-slate-900">Ma trận đặc tả đề kiểm tra</h2>
+                    <div class="flex gap-2">
+                        <button id="distribute-btn" class="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 2.25h16.5m-16.5-4.5h16.5m-16.5-4.5h16.5" />
+                            </svg>
+                            Phân bổ câu hỏi
+                        </button>
+                        <button id="print-btn" class="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg shadow-sm transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+                            In ra Word
+                        </button>
+                    </div>
+                </div>
+                <div id="matrix-content" class="space-y-6 overflow-x-auto">
+                    <!-- Tables will be injected here by JS -->
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Modal for creating/renaming folder -->
@@ -217,6 +237,20 @@
         </div>
     </div>
 
+    <!-- Percentage Modal -->
+    <div id="percentage-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+            <h3 class="text-lg font-bold mb-4">Chỉnh sửa tỷ lệ phần trăm</h3>
+            <div id="percentage-modal-content" class="space-y-3">
+                <!-- Nội dung sẽ được tạo bởi JS -->
+            </div>
+            <div class="flex justify-end gap-3 mt-5">
+                <button id="cancel-percentage-btn" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-semibold py-2 px-4 rounded-lg transition-all duration-200">Hủy</button>
+                <button id="save-percentage-btn" class="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200">Lưu</button>
+            </div>
+        </div>
+    </div>
+
 
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-5 right-5 bg-red-500 text-white py-2 px-5 rounded-lg shadow-lg opacity-0 transform translate-y-[20px] transition-all duration-300 z-50">
@@ -253,6 +287,11 @@
             const confirmActionBtn = document.getElementById('confirm-action-btn');
             let confirmCallback = null;
 
+            const percentageModal = document.getElementById('percentage-modal');
+            const percentageModalContent = document.getElementById('percentage-modal-content');
+            const cancelPercentageBtn = document.getElementById('cancel-percentage-btn');
+            const savePercentageBtn = document.getElementById('save-percentage-btn');
+
             // --- Toolbar & Upload elements ---
             const actionToolbar = document.getElementById('action-toolbar');
             const selectionCountSpan = document.getElementById('selection-count');
@@ -263,6 +302,7 @@
             const uploadBtn = document.getElementById('upload-btn');
             const fileInput = document.getElementById('file-input');
             const printBtn = document.getElementById('print-btn');
+            const distributeBtn = document.getElementById('distribute-btn');
 
             // Toast elements
             const toast = document.getElementById('toast');
@@ -329,7 +369,7 @@
                         "1. Đặc điểm của thông tin trong môi trường số": "Nhận biết\n– Nêu được các đặc điểm của thông tin số: đa dạng, được thu thập ngày càng nhanh và nhiều, được lưu trữ với dung lượng khổng lồ bởi nhiều tổ chức và cá nhân, có tính bản quyền, có độ tin cậy rất khác nhau, có các công cụ tìm kiếm, chuyển đổi, truyền và xử lí hiệu quả.\nThông hiểu\n– Trình bày được tầm quan trọng của việc biết khai thác các nguồn thông tin đáng tin cậy, nêu được ví dụ minh hoạ.\n– Nêu được ví dụ minh hoạ sử dụng công cụ tìm kiếm, xử lí và trao đổi thông tin trong môi trường số.\nVận dụng\n– Sử dụng được công cụ tìm kiếm, xử lí và trao đổi thông tin trong môi trường số.",
                         "2. Thông tin với giải quyết vấn đề": "Thông hiểu\n– Xác định được lợi ích của thông tin tìm được trong giải quyết vấn đề, nêu được ví dụ minh hoạ.\nVận dụng\n– Chủ động tìm kiếm được thông tin để thực hiện nhiệm vụ (thông qua bài tập cụ thể)."
                     },
-                    "Chủ đề D. Đạo đức, pháp luật và văn hoá trong môi trường số": {
+                    "Chủ đề D. Đạo đức và văn hoá trong môi trường số": {
                         "Đạo đức và văn hoá trong sử dụng công nghệ kĩ thuật số": "Thông hiểu\n– Nhận biết và giải thích được một số biểu hiện vi phạm đạo đức và pháp luật, biểu hiện thiếu văn hoá khi sử dụng công nghệ kĩ thuật số. Ví dụ: thu âm, quay phim, chụp ảnh khi không được phép, dùng các sản phẩm văn hoá vi phạm bản quyền, ...\nVận dụng\n– Khi tạo ra các sản phẩm số luôn thể hiện được tính đạo đức, văn hoá và không vi phạm pháp luật."
                     },
                     "Chủ đề E. Ứng dụng tin học": {
@@ -358,7 +398,7 @@
                         "1. Phần mềm mô phỏng và khám phá tri thức": "Nhận biết\n– Nêu được những kiến thức đã thu nhận từ việc khai thác một vài phần mềm mô phỏng.\n– Nhận biết được sự mô phỏng thế giới thực nhờ máy tính có thể giúp con người khám phá tri thức và giải quyết vấn đề.\nThông hiểu\n– Nêu được ví dụ phần mềm mô phỏng.",
                         "2. Trình bày thông tin trong trao đổi và hợp tác": "Nhận biết\n– Biết được khả năng đính kèm văn bản, ảnh, video, trang tính vào sơ đồ tư duy.\nVận dụng\n– Sử dụng được hình ảnh, biểu đồ, video trong trao đổi thông tin và hợp tác.\nVận dụng cao\n– Sử dụng được bài trình chiếu và sơ đồ tư duy trong trao đổi thông tin và hợp tác.",
                         "3. Chủ đề con (lựa chọn): Sử dụng bảng tính điện tử nâng cao": "Vận dụng cao\n– Thực hiện được dự án sử dụng bảng tính điện tử góp phần giải quyết một bài toán liên quan đến quản lí tài chính, dân số,... Ví dụ: quản lí chi tiêu của gia đình, quản lí thu chi quỹ lớp.",
-                        "4. Chủ đề con (lựa chọn): Làm quen với phần mềm làm video": "Vận dụng\n– Nêu được một số chức năng và thực hiện được một số thao tác cơ bản trong sử dụng một phần mềm làm video.\nVận dụng cao\n– Tạo được một vài đoạn video đáp ứng nhu cầu cuộc sống của cá nhân, gia đình, trường học, địa phương."
+                        "4. Chủ đề con (lựa chọn): Làm quen với phần mềm làm video": "Vận dụng\n– Nêu được một số chức năng và thực hiện được một số thao tác cơ bản trong sử dụng một phần mềm làm video.\nVận dụng cao\n– Tạo được một vài đoạn video đáp ứng nhu cầu cuộc sống của cá nhân, gia đình, trường học và địa phương."
                     },
                     "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính": {
                         "Giải bài toán bằng máy tính": "Thông qua các ví dụ về lập trình trực quan:\nNhận biết\n– Nêu được quy trình con người giao bài toán cho máy tính giải quyết.\nThông hiểu\n– Trình bày được quá trình giải quyết vấn đề và mô tả được giải pháp dưới dạng thuật toán (hoặc bằng phương pháp liệt kê các bước hoặc bằng sơ đồ khối).\n– Giải thích được trong quy trình giải quyết vấn đề có những bước (những vấn đề nhỏ hơn) có thể chuyển giao cho máy tính thực hiện, nêu được ví dụ minh hoạ.\n– Giải thích được khái niệm bài toán trong tin học là một nhiệm vụ có thể giao cho máy tính thực hiện, nêu được ví dụ minh hoạ.\n– Giải thích được chương trình là bản mô tả thuật toán bằng ngôn ngữ mà máy tính có thể “hiểu” và thực hiện.\nVận dụng\n– Sử dụng được cấu trúc tuần tự, rẽ nhánh, lặp trong mô tả thuật toán."
@@ -388,7 +428,7 @@
                 "Lớp 8": [
                     { group: "Chủ đề A. Máy tính và cộng đồng", items: ["Sơ lược về lịch sử phát triển máy tính"] },
                     { group: "Chủ đề C. Tổ chức lưu trữ, tìm kiếm và trao đổi thông tin", items: ["1. Đặc điểm của thông tin trong môi trường số", "2. Thông tin với giải quyết vấn đề"] },
-                    { group: "Chủ đề D. Đạo đức, pháp luật và văn hoá trong môi trường số", items: ["Đạo đức và văn hoá trong sử dụng công nghệ kĩ thuật số"] },
+                    { group: "Chủ đề D. Đạo đức và văn hoá trong môi trường số", items: ["Đạo đức và văn hoá trong sử dụng công nghệ kĩ thuật số"] },
                     { group: "Chủ đề E. Ứng dụng tin học", items: ["1. Xử lí và trực quan hoá dữ liệu bằng bảng tính điện tử", "2. Chủ đề con (lựa chọn): Soạn thảo văn bản và phần mềm trình chiếu nâng cao", "3. Chủ đề con (lựa chọn): Làm quen với phần mềm chỉnh sửa ảnh"] },
                     { group: "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính", items: ["Lập trình trực quan"] },
                     { group: "Chủ đề G. Hướng nghiệp với tin học", items: ["Tin học và ngành nghề"] }
@@ -402,7 +442,48 @@
                     { group: "Chủ đề G. Hướng nghiệp với tin học", items: ["Tin học và định hướng nghề nghiệp"] }
                 ]
             };
-
+            
+            const topicPercentages = {
+                "Lớp 6": {
+                    "Chủ đề A. Máy tính và cộng đồng": 17,
+                    "Chủ đề B. Mạng máy tính và Internet": 11,
+                    "Chủ đề C. Tổ chức lưu trữ, tìm kiếm và trao đổi thông tin": 17,
+                    "Chủ đề D. Đạo đức, pháp luật và văn hoá trong môi trường số": 9,
+                    "Chủ đề E. Ứng dụng tin học": 26,
+                    "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính": 14,
+                    "Đánh giá định kì": 6
+                },
+                "Lớp 7": {
+                    "Chủ đề A. Máy tính và cộng đồng": 17,
+                    "Chủ đề B. Mạng máy tính và Internet": 0,
+                    "Chủ đề C. Tổ chức lưu trữ, tìm kiếm và trao đổi thông tin": 8,
+                    "Chủ đề D. Đạo đức, pháp luật và văn hoá trong môi trường số": 6,
+                    "Chủ đề E. Ứng dụng tin học": 49,
+                    "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính": 14,
+                    "Đánh giá định kì": 6
+                },
+                "Lớp 8": {
+                    "Chủ đề A. Máy tính và cộng đồng": 6,
+                    "Chủ đề B. Mạng máy tính và Internet": 0,
+                    "Chủ đề C. Tổ chức lưu trữ, tìm kiếm và trao đổi thông tin": 11,
+                    "Chủ đề D. Đạo đức và văn hoá trong môi trường số": 3,
+                    "Chủ đề E. Ứng dụng tin học": 45,
+                    "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính": 23,
+                    "Chủ đề G. Hướng nghiệp với tin học": 6,
+                    "Đánh giá định kì": 6
+                },
+                 "Lớp 9": {
+                    "Chủ đề A. Máy tính và cộng đồng": 6,
+                    "Chủ đề B. Mạng máy tính và Internet": 0,
+                    "Chủ đề C. Tổ chức lưu trữ, tìm kiếm và trao đổi thông tin": 9,
+                    "Chủ đề D. Đạo đức, pháp luật và văn hoá trong môi trường số": 6,
+                    "Chủ đề E. Ứng dụng tin học": 48,
+                    "Chủ đề F. Giải quyết vấn đề với sự trợ giúp của máy tính": 17,
+                    "Chủ đề G. Hướng nghiệp với tin học": 8,
+                    "Đánh giá định kì": 6
+                }
+            };
+            
             // --- Utility Functions ---
             const findDirectory = (path) => {
                 let current = fileSystem;
@@ -425,24 +506,22 @@
                 const gradeData = requirementsData[gradeKey];
 
                 if (!gradeData || !gradeData[mainTopic] || !gradeData[mainTopic][subTopic]) {
-                    console.error(`Yêu cầu không tìm thấy cho: ${gradeKey} -> ${mainTopic} -> ${subTopic}`);
-                    return ''; // Trả về chuỗi rỗng nếu không tìm thấy dữ liệu
+                    return '';
                 }
                 const requirementsText = gradeData[mainTopic][subTopic];
                 
-                // Xử lý các dòng văn bản để thêm cấu trúc (in đậm cho các cấp độ)
                 const levelKeywords = ["nhận biết", "thông hiểu", "vận dụng", "vận dụng cao"];
-                let isFirstLevel = true; // Cờ để tránh thêm lề trên cho cấp độ đầu tiên
+                let isFirstLevel = true;
                 
                 return requirementsText.split('\n').map(line => {
                     const trimmedLine = line.trim();
-                    if (!trimmedLine) return ''; // Bỏ qua các dòng trống
+                    if (!trimmedLine) return '';
 
                     const coreText = trimmedLine.replace(/^[\d.]+\s*/, '').toLowerCase();
                     const isLevel = levelKeywords.some(keyword => coreText.startsWith(keyword));
                     
                     if (isLevel) {
-                        const marginTopClass = isFirstLevel ? '' : 'mt-2'; // Thêm lề trên cho các cấp độ tiếp theo
+                        const marginTopClass = isFirstLevel ? '' : 'mt-2';
                         isFirstLevel = false;
                         return `<strong class="block font-semibold ${marginTopClass}">${trimmedLine}</strong>`;
                     } else {
@@ -451,12 +530,13 @@
                 }).join('');
             };
 
-            const createDefaultMatrixData = (topic, subTopic, grade) => {
+            const createDefaultMatrixData = (topic, subTopic, grade, normalizedPercentages, subTopicPercentages) => {
                 const requirements = getRequirementsHtml(grade, topic, subTopic);
+                const subTopicPercent = subTopicPercentages[subTopic] || 0;
                 return {
                     matrix: {
                         rows: [
-                            ['1', topic, subTopic, '', '', '', '', '', '', '', '', '0', '']
+                            ['1', topic, subTopic, '', '', '', '', '', '', '', '', subTopicPercent, '']
                         ]
                     },
                     specifications: {
@@ -466,14 +546,17 @@
                     },
                     availableCounts: [
                         { NB: {TN: 0, TL: 0}, TH: {TN: 0, TL: 0}, VD: {TN: 0, TL: 0}, VDC: {TN: 0, TL: 0} }
-                    ]
+                    ],
+                    normalizedPercentages: normalizedPercentages,
+                    subTopicPercentages: subTopicPercentages
                 };
             };
-
-            const addRowToMatrix = (matrixData, topic, subTopic, grade) => {
+            
+            const addRowToMatrix = (matrixData, topic, subTopic, grade, normalizedPercentages, subTopicPercentages) => {
                 const requirements = getRequirementsHtml(grade, topic, subTopic);
                 const newRowIndex = matrixData.matrix.rows.length + 1;
-                matrixData.matrix.rows.push([newRowIndex.toString(), topic, subTopic, '', '', '', '', '', '', '', '', '0', '']);
+                const subTopicPercent = subTopicPercentages[subTopic] || 0;
+                matrixData.matrix.rows.push([newRowIndex.toString(), topic, subTopic, '', '', '', '', '', '', '', '', subTopicPercent, '']);
                 matrixData.specifications.rows.push([newRowIndex.toString(), topic, subTopic, requirements, '', '', '', '']);
                 matrixData.availableCounts.push({ NB: {TN: 0, TL: 0}, TH: {TN: 0, TL: 0}, VD: {TN: 0, TL: 0}, VDC: {TN: 0, TL: 0} });
             };
@@ -504,19 +587,16 @@
             };
 
             const showToast = (message, isError = true) => {
-                // Xóa timeout cũ nếu có, đảm bảo thông báo mới hiển thị đủ 3s
                 if (toastTimeout) {
                     clearTimeout(toastTimeout);
                 }
 
-                toastMessage.textContent = message;
-                // Hiển thị thông báo
+                toastMessage.innerHTML = message;
                 toast.className = `fixed bottom-5 right-5 ${isError ? 'bg-red-500' : 'bg-green-500'} text-white py-2 px-5 rounded-lg shadow-lg opacity-100 transform translate-y-0 transition-all duration-300 z-50`;
                 
-                // Đặt timeout mới để ẩn thông báo sau 3 giây
                 toastTimeout = setTimeout(() => {
                     toast.className = toast.className.replace('opacity-100 translate-y-0', 'opacity-0 translate-y-[20px]');
-                    toastTimeout = null; // Đặt lại biến timeout
+                    toastTimeout = null;
                 }, 3000);
             };
 
@@ -539,69 +619,100 @@
             const handleDeleteRow = (indexToDelete) => {
                 const currentDir = getCurrentDirectory();
                 if (currentDir && currentDir.matrixData) {
-                    // Sửa lỗi: Lấy tên chủ đề CẦN XÓA trước khi thực hiện xóa
-                    const deletedTopicName = currentDir.matrixData.specifications.rows[indexToDelete]?.[2];
+                    const subTopicName = currentDir.matrixData.matrix.rows[indexToDelete][2];
 
-                    // Xóa hàng khỏi dữ liệu ma trận
+                    // Remove item from file system
+                    currentDir.children = currentDir.children.filter(child => child.name !== subTopicName || child.type !== 'folder');
+                    
+                    // Remove row from matrixData
                     currentDir.matrixData.matrix.rows.splice(indexToDelete, 1);
                     currentDir.matrixData.specifications.rows.splice(indexToDelete, 1);
                     currentDir.matrixData.availableCounts.splice(indexToDelete, 1);
-                    
-                    // Đánh số lại thứ tự các hàng còn lại
-                    for (let i = 0; i < currentDir.matrixData.matrix.rows.length; i++) {
-                        currentDir.matrixData.matrix.rows[i][0] = i + 1;
-                        currentDir.matrixData.specifications.rows[i][0] = i + 1;
+
+                    // If matrix is empty, delete matrixData
+                    if (currentDir.matrixData.matrix.rows.length === 0) {
+                        delete currentDir.matrixData;
+                    } else {
+                        regenerateMatrix(currentDir);
                     }
 
-                    // Nếu tìm thấy tên, xóa thư mục chủ đề tương ứng
-                    if (deletedTopicName) {
-                        // Sửa lỗi: Logic filter để xóa đúng thư mục
-                        currentDir.children = currentDir.children.filter(child => !(child.name === deletedTopicName && child.type === 'folder'));
-                    }
-                    
-                    // Nếu ma trận rỗng, xóa dữ liệu ma trận
-                    if (currentDir.matrixData.matrix.rows.length === 0) { 
-                        delete currentDir.matrixData; 
-                    }
-                    
-                    // Vẽ lại toàn bộ giao diện để đồng bộ hóa danh sách tệp và ma trận
-                    render(); 
+                    render();
+                    showToast(`Đã xóa chủ đề "${subTopicName}".`, false);
                 }
             };
-
+            
             const formatDiem = (diem) => {
-                // Nhân với 100 và làm tròn để có một số nguyên ổn định, tránh lỗi dấu phẩy động.
                 const scaled = Math.round(diem * 100);
-
-                // Kiểm tra xem kết quả có tương ứng với một số nguyên không (ví dụ: 1.00 -> 100)
                 if (scaled % 100 === 0) {
-                    return (scaled / 100).toFixed(1); // Định dạng là "1.0"
+                    return (scaled / 100).toFixed(1);
+                }
+                return (scaled / 100).toString();
+            };
+            
+            const updateRowTotals = (rowIndex) => {
+                const currentDir = getCurrentDirectory();
+                if (!currentDir || !currentDir.matrixData) return;
+                const rowData = currentDir.matrixData.matrix.rows[rowIndex];
+                
+                const tnkq_count = (parseInt(rowData[3] || 0) + parseInt(rowData[5] || 0) + parseInt(rowData[7] || 0) + parseInt(rowData[9] || 0));
+                const tl_count = (parseInt(rowData[4] || 0) + parseInt(rowData[6] || 0) + parseInt(rowData[8] || 0) + parseInt(rowData[10] || 0));
+                const points = (tnkq_count * 0.25) + (tl_count * 1.0);
+                
+                let totalPointsAllRows = currentDir.matrixData.matrix.rows.reduce((sum, row) => {
+                    const tnkq_count = (parseInt(row[3] || 0) + parseInt(row[5] || 0) + parseInt(row[7] || 0) + parseInt(row[9] || 0));
+                    const tl_count = (parseInt(row[4] || 0) + parseInt(row[6] || 0) + parseInt(row[8] || 0) + parseInt(row[10] || 0));
+                    return sum + (tnkq_count * 0.25) + (tl_count * 1.0);
+                }, 0);
+                
+                totalPointsAllRows = totalPointsAllRows === 0 ? 10 : totalPointsAllRows;
+
+                const percentage = (points / totalPointsAllRows * 100).toFixed(0);
+                rowData[11] = parseInt(percentage, 10);
+            };
+
+            const updateDistributeButtonState = (currentDir) => {
+                const distributeBtn = document.getElementById('distribute-btn');
+                if (!distributeBtn) return;
+
+                if (!currentDir || !currentDir.matrixData || currentDir.matrixData.matrix.rows.length === 0) {
+                    distributeBtn.disabled = true;
+                    distributeBtn.classList.add('opacity-50');
+                    return;
                 }
                 
-                // Đối với các số khác (ví dụ: 0.75 -> 75, 0.5 -> 50), chỉ cần chuyển đổi lại và trả về chuỗi.
-                return (scaled / 100).toString();
+                const allTopicsHaveFiles = currentDir.children.every(topic => topic.children && topic.children.length > 0);
+                
+                if (allTopicsHaveFiles) {
+                    distributeBtn.disabled = false;
+                    distributeBtn.classList.remove('opacity-50');
+                } else {
+                    distributeBtn.disabled = true;
+                    distributeBtn.classList.add('opacity-50');
+                }
             };
 
             // --- Rendering Functions ---
             const render = () => {
                 const currentDir = getCurrentDirectory();
                 
-                // Reset visibility
                 matrixContainer.classList.add('hidden');
                 uploadBtn.classList.add('hidden');
                 fileExplorer.classList.add('hidden');
+                distributeBtn.classList.add('hidden');
 
-                if (currentPath.length === 0) { // Root level
+                if (currentPath.length === 0) {
                     fileExplorer.classList.remove('hidden');
-                } else if (currentPath.length === 1) { // Grade/Exam level
+                } else if (currentPath.length === 1) {
                     if (currentDir.matrixData) {
                         matrixContainer.classList.remove('hidden');
+                        distributeBtn.classList.remove('hidden');
                         renderMatrix(currentDir.matrixData, false);
+                        updateDistributeButtonState(currentDir);
                     }
                     fileExplorer.classList.remove('hidden');
-                } else if (currentPath.length >= 2) { // Topic level and deeper
+                } else if (currentPath.length >= 2) {
                     fileExplorer.classList.remove('hidden');
-                    uploadBtn.classList.remove('hidden'); // Show upload button inside topic folder
+                    uploadBtn.classList.remove('hidden');
                 }
 
                 fileList.innerHTML = ''; 
@@ -616,7 +727,6 @@
                 emptyFolderMessage.style.display = 'none';
                 createInitialFolderBtn.classList.add('hidden');
 
-                // Show "Create" card only at root and grade/exam level
                 if (currentPath.length <= 1) {
                     const createFolderCard = document.createElement('div');
                     createFolderCard.className = 'flex items-center justify-center p-3 bg-slate-50 rounded-lg cursor-pointer hover:bg-indigo-100 border-2 border-dashed border-slate-300 hover:border-indigo-400 transition-all duration-200 h-full';
@@ -630,7 +740,6 @@
                     fileList.appendChild(createFolderCard);
                 }
                 
-                // Render existing items after the card
                 sortedChildren.forEach(item => renderItem(item));
 
                 if (sortedChildren.length === 0 && currentPath.length > 0) {
@@ -640,7 +749,6 @@
                      emptyText.textContent = "Thư mục này trống.";
                      emptySubText.textContent = "Bạn có thể tạo chủ đề mới hoặc tải lên tệp.";
                 }
-
 
                 renderBreadcrumbs();
             };
@@ -668,17 +776,13 @@
                 if (item.type === 'folder') {
                     clickablePart.addEventListener('click', () => { 
                         clearSelection(); 
-                        
-                        // Logic mới: Tự động cập nhật ma trận khi click vào thư mục chủ đề
-                        if (currentPath.length === 1) { // Nếu đang ở cấp "Loại đề"
+                        if (currentPath.length === 1) {
                              const currentDir = getCurrentDirectory();
                              const topicFolder = currentDir.children.find(c => c.name === item.name && c.type === 'folder');
                              if (topicFolder) {
                                  updateMatrixFromTopicFolder(currentDir, topicFolder);
                              }
                         }
-
-                        // Điều hướng vào thư mục
                         currentPath.push(item.name); 
                         render(); 
                     });
@@ -686,7 +790,6 @@
                     clickablePart.addEventListener('dragleave', handleDragLeave);
                     clickablePart.addEventListener('drop', handleDrop);
                 } 
-                // Không cần xử lý click cho tệp nữa, vì số liệu được tổng hợp ở cấp thư mục.
                 fileList.appendChild(itemElement);
             }
 
@@ -705,21 +808,12 @@
             };
 
             const renderMatrix = (data, shouldScroll = false) => {
-                if (!data || !data.matrix || !data.specifications) { return; }
+                if (!data || !data.matrix || !data.specifications || !data.normalizedPercentages) { return; }
                 matrixContent.innerHTML = ''; 
                 const deleteButtonHtml = (index) => `<button class="delete-row-btn text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-100 transition-colors" data-index="${index}" title="Xóa dòng"><svg class="pointer-events-none" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>`;
                 
                 const pointsTNKQ = 0.25;
                 const pointsTL = 1;
-
-                // Calculate total points for the entire test
-                let totalTNKQ_all = 0;
-                let totalTL_all = 0;
-                data.matrix.rows.forEach(row => {
-                    totalTNKQ_all += (parseInt(row[3] || 0) + parseInt(row[5] || 0) + parseInt(row[7] || 0) + parseInt(row[9] || 0));
-                    totalTL_all += (parseInt(row[4] || 0) + parseInt(row[6] || 0) + parseInt(row[8] || 0) + parseInt(row[10] || 0));
-                });
-                const totalTestPoints = (totalTNKQ_all * pointsTNKQ) + (totalTL_all * pointsTL);
 
                 // --- KHUNG MA TRẬN ---
                 const matrixTable = document.createElement('table'); 
@@ -732,11 +826,19 @@
                     for (let j = i + 1; j < data.matrix.rows.length; j++) { if (data.matrix.rows[j][1] === mainTopic) { rowspanCount++; } else { break; } }
                     
                     const processRow = (row) => {
-                        const tnkqInRow = (parseInt(row[3] || 0) + parseInt(row[5] || 0) + parseInt(row[7] || 0) + parseInt(row[9] || 0));
-                        const tlInRow = (parseInt(row[4] || 0) + parseInt(row[6] || 0) + parseInt(row[8] || 0) + parseInt(row[10] || 0));
-                        const pointsInRow = (tnkqInRow * pointsTNKQ) + (tlInRow * pointsTL);
-                        const percentage = (totalTestPoints > 0) ? ((pointsInRow / totalTestPoints) * 100).toFixed(0) : '0';
+                        const tnkq_count = (parseInt(row[3] || 0) + parseInt(row[5] || 0) + parseInt(row[7] || 0) + parseInt(row[9] || 0));
+                        const tl_count = (parseInt(row[4] || 0) + parseInt(row[6] || 0) + parseInt(row[8] || 0) + parseInt(row[10] || 0));
+                        const points = (tnkq_count * pointsTNKQ) + (tl_count * pointsTL);
+
+                        let totalPointsAllRows = data.matrix.rows.reduce((sum, row) => {
+                            const tnkq_count = (parseInt(row[3] || 0) + parseInt(row[5] || 0) + parseInt(row[7] || 0) + parseInt(row[9] || 0));
+                            const tl_count = (parseInt(row[4] || 0) + parseInt(row[6] || 0) + parseInt(row[8] || 0) + parseInt(row[10] || 0));
+                            return sum + (tnkq_count * pointsTNKQ) + (tl_count * pointsTL);
+                        }, 0);
                         
+                        const totalMaxPoints = 10;
+                        const percentage = (points / totalMaxPoints * 100).toFixed(0);
+
                         let rowHtml = `<td class="bg-white text-left">${row[2] || ''}</td>`;
                         for (let k = 3; k < 11; k++) {
                             const cau = parseInt(row[k] || 0);
@@ -748,7 +850,7 @@
                                 rowHtml += `<td class="bg-white"></td>`;
                             }
                         }
-                        rowHtml += `<td class="bg-white">${percentage}%</td>`;
+                        rowHtml += `<td class="bg-white editable-percentage" data-subtopic="${row[2]}">${percentage}%</td>`;
                         return rowHtml;
                     };
 
@@ -775,28 +877,27 @@
                     i += rowspanCount;
                 }
                 const matrixTotals = Array(13).fill(0);
-                let grandTotalQuestions = 0;
                 data.matrix.rows.forEach(row => {
                     for (let i = 3; i < 11; i++) {
                         matrixTotals[i] += parseInt(row[i], 10) || 0;
                     }
                 });
-                for(let i = 3; i < 11; i++) grandTotalQuestions += matrixTotals[i];
-                
+
                 const nbPoints = (matrixTotals[3] * pointsTNKQ) + (matrixTotals[4] * pointsTL);
                 const thPoints = (matrixTotals[5] * pointsTNKQ) + (matrixTotals[6] * pointsTL);
                 const vdPoints = (matrixTotals[7] * pointsTNKQ) + (matrixTotals[8] * pointsTL);
                 const vdcPoints = (matrixTotals[9] * pointsTNKQ) + (matrixTotals[10] * pointsTL);
 
-                const nbPercent = totalTestPoints > 0 ? (nbPoints / totalTestPoints * 100).toFixed(0) : 0;
-                const thPercent = totalTestPoints > 0 ? (thPoints / totalTestPoints * 100).toFixed(0) : 0;
-                const vdPercent = totalTestPoints > 0 ? (vdPoints / totalTestPoints * 100).toFixed(0) : 0;
-                const vdcPercent = totalTestPoints > 0 ? (vdcPoints / totalTestPoints * 100).toFixed(0) : 0;
+                const totalTestPoints = nbPoints + thPoints + vdPoints + vdcPoints;
+                const nbPercent = totalTestPoints > 0 ? (nbPoints / 10 * 100) : 0;
+                const thPercent = totalTestPoints > 0 ? (thPoints / 10 * 100) : 0;
+                const vdPercent = totalTestPoints > 0 ? (vdPoints / 10 * 100) : 0;
+                const vdcPercent = totalTestPoints > 0 ? (vdcPoints / 10 * 100) : 0;
                 
                 const nb_th_points = nbPoints + thPoints;
                 const vd_vdc_points = vdPoints + vdcPoints;
-                const nb_th_percent = totalTestPoints > 0 ? (nb_th_points / totalTestPoints * 100).toFixed(0) : 0;
-                const vd_vdc_percent = totalTestPoints > 0 ? (vd_vdc_points / totalTestPoints * 100).toFixed(0) : 0;
+                const nb_th_percent = totalTestPoints > 0 ? (nb_th_points / 10 * 100) : 0;
+                const vd_vdc_percent = totalTestPoints > 0 ? (vd_vdc_points / 10 * 100) : 0;
 
                 matrixHtml += `</tbody><tfoot class="font-bold bg-slate-100">
                 <tr>
@@ -809,16 +910,16 @@
                 </tr>
                 <tr>
                     <td colspan="3" class="text-right">Tỉ lệ điểm (%)</td>
-                    <td colspan="2">${nbPercent}%</td>
-                    <td colspan="2">${thPercent}%</td>
-                    <td colspan="2">${vdPercent}%</td>
-                    <td colspan="2">${vdcPercent}%</td>
+                    <td colspan="2"><b>${nbPercent.toFixed(0)}%</b></td>
+                    <td colspan="2"><b>${thPercent.toFixed(0)}%</b></td>
+                    <td colspan="2"><b>${vdPercent.toFixed(0)}%</b></td>
+                    <td colspan="2"><b>${vdcPercent.toFixed(0)}%</b></td>
                     <td>100%</td>
                 </tr>
                  <tr>
                     <td colspan="3" class="text-right">Tỉ lệ chung (%)</td>
-                    <td colspan="4">${nb_th_percent}%</td>
-                    <td colspan="4">${vd_vdc_percent}%</td>
+                    <td colspan="4"><b>${nb_th_percent.toFixed(0)}%</b></td>
+                    <td colspan="4"><b>${vd_vdc_percent.toFixed(0)}%</b></td>
                     <td>100%</td>
                 </tr>
                 </tfoot>`;
@@ -938,6 +1039,70 @@
                 confirmModal.classList.add('hidden');
                 confirmModal.classList.remove('flex');
                 confirmCallback = null;
+            };
+
+            const showPercentageModal = (percentages, callback) => {
+                percentageModalContent.innerHTML = '';
+                const currentDir = getCurrentDirectory();
+                const groupedByMainTopic = currentDir.matrixData.matrix.rows.reduce((acc, row) => {
+                    const mainTopic = row[1];
+                    if (!acc[mainTopic]) acc[mainTopic] = [];
+                    acc[mainTopic].push(row[2]);
+                    return acc;
+                }, {});
+
+                for (const mainTopic in groupedByMainTopic) {
+                    const subTopics = groupedByMainTopic[mainTopic];
+                    const mainTopicGroup = document.createElement('div');
+                    mainTopicGroup.className = 'border-b pb-2 mb-2 last:border-b-0 last:pb-0';
+                    
+                    const subTopicTotal = subTopics.reduce((sum, sub) => sum + (percentages[sub] || 0), 0);
+
+                    mainTopicGroup.innerHTML = `<h4 class="font-semibold text-slate-700 mb-1">${mainTopic} (Tổng: ${subTopicTotal}%)</h4>`;
+                    
+                    subTopics.forEach(subTopic => {
+                        const currentPercentage = percentages[subTopic] || 0;
+                        const subTopicElement = document.createElement('div');
+                        subTopicElement.className = 'flex items-center gap-2 pl-4';
+                        subTopicElement.innerHTML = `
+                            <label class="flex-grow text-sm text-slate-600">${subTopic}:</label>
+                            <input type="number" data-subtopic="${subTopic}" value="${currentPercentage}" min="0" class="w-20 text-sm text-right px-2 py-1 border rounded-md focus:ring-2 focus:ring-indigo-500" />
+                            <span class="text-sm text-slate-500">%</span>
+                        `;
+                        mainTopicGroup.appendChild(subTopicElement);
+                    });
+                    percentageModalContent.appendChild(mainTopicGroup);
+                }
+
+                savePercentageBtn.onclick = () => {
+                    let newSubTopicPercentages = {};
+                    let totalSum = 0;
+                    const inputs = percentageModalContent.querySelectorAll('input');
+
+                    inputs.forEach(input => {
+                        const subTopic = input.dataset.subtopic;
+                        const value = parseInt(input.value, 10) || 0;
+                        newSubTopicPercentages[subTopic] = value;
+                        totalSum += value;
+                    });
+                    
+                    if (totalSum !== 100) {
+                        showToast(`Tổng tỷ lệ phải bằng 100%, hiện tại là ${totalSum}%. Vui lòng điều chỉnh.`);
+                        return;
+                    }
+                    
+                    callback(newSubTopicPercentages);
+                    hidePercentageModal();
+                };
+
+                percentageModal.classList.remove('hidden');
+                percentageModal.classList.add('flex');
+            };
+
+            const hidePercentageModal = () => {
+                 percentageModal.classList.add('hidden');
+                 percentageModal.classList.remove('flex');
+                 savePercentageBtn.onclick = null; // Clear handler
             };
 
             const openFolderModal = (mode, name = '') => {
@@ -1099,6 +1264,7 @@
                      render();
                      return;
                 }
+                const basePercentages = topicPercentages[gradeKey];
 
                 const topicsWithMainTopics = folders.map(folder => {
                     const subTopic = folder.name;
@@ -1109,11 +1275,82 @@
                             break;
                         }
                     }
-                    if (!mainTopic) {
-                        console.warn(`Không tìm thấy chủ đề chính cho: ${subTopic}`);
-                    }
                     return { mainTopic, subTopic };
-                }).filter(topic => topic.mainTopic); // Filter out topics where no main topic was found
+                }).filter(topic => topic.mainTopic);
+
+                const groupedByMainTopic = topicsWithMainTopics.reduce((acc, topic) => {
+                    if (!acc[topic.mainTopic]) {
+                        acc[topic.mainTopic] = [];
+                    }
+                    acc[topic.mainTopic].push(topic.subTopic);
+                    return acc;
+                }, {});
+
+                let totalOriginalPercentage = Object.keys(groupedByMainTopic).reduce((sum, mainTopic) => {
+                    return sum + (basePercentages[mainTopic] || 0);
+                }, 0);
+
+                const normalizedMainTopicPercentages = {};
+                if (totalOriginalPercentage > 0) {
+                    Object.keys(groupedByMainTopic).forEach(mainTopic => {
+                        const originalPercent = basePercentages[mainTopic] || 0;
+                        const newPercent = Math.round((originalPercent / totalOriginalPercentage) * 100);
+                        normalizedMainTopicPercentages[mainTopic] = newPercent;
+                    });
+                }
+
+                let totalNormalized = Object.values(normalizedMainTopicPercentages).reduce((sum, p) => sum + p, 0);
+                let diff = 100 - totalNormalized;
+                if (diff !== 0) {
+                    const sortedTopics = Object.keys(normalizedMainTopicPercentages).sort((a, b) => {
+                        const originalPercentA = basePercentages[a] || 0;
+                        const originalPercentB = basePercentages[b] || 0;
+                        return originalPercentB - originalPercentA;
+                    });
+                    sortedTopics.slice(0, Math.abs(diff)).forEach(topic => {
+                        if (diff > 0) {
+                            normalizedMainTopicPercentages[topic]++;
+                        } else {
+                            normalizedMainTopicPercentages[topic]--;
+                        }
+                    });
+                }
+
+
+                const subTopicPercentages = {};
+                for (const mainTopic in groupedByMainTopic) {
+                    const subTopics = groupedByMainTopic[mainTopic];
+                    const mainTopicPercent = normalizedMainTopicPercentages[mainTopic] || 0;
+                    const subTopicCount = subTopics.length;
+                    if (subTopicCount > 0) {
+                        const baseSubPercent = Math.floor(mainTopicPercent / subTopicCount);
+                        let remainder = mainTopicPercent % subTopicCount;
+                        subTopics.forEach((sub) => {
+                            let percent = baseSubPercent;
+                            if (remainder > 0) {
+                                percent++;
+                                remainder--;
+                            }
+                            subTopicPercentages[sub] = percent;
+                        });
+                    }
+                }
+                
+                const currentTotalSubPercent = Object.values(subTopicPercentages).reduce((sum, p) => sum + p, 0);
+                const subDiff = 100 - currentTotalSubPercent;
+                if (subDiff !== 0) {
+                    const sortedSubtopics = Object.keys(subTopicPercentages).sort((a, b) => {
+                        return subTopicPercentages[b] - subTopicPercentages[a];
+                    });
+                     sortedSubtopics.slice(0, Math.abs(subDiff)).forEach(subTopic => {
+                        if (subDiff > 0) {
+                            subTopicPercentages[subTopic]++;
+                        } else {
+                            subTopicPercentages[subTopic]--;
+                        }
+                    });
+                }
+
 
                 topicsWithMainTopics.sort((a, b) => {
                     const mainTopicCompare = a.mainTopic.localeCompare(b.mainTopic, 'vi');
@@ -1122,23 +1359,25 @@
                     }
                     return a.subTopic.localeCompare(b.subTopic, 'vi');
                 });
-
-                delete dir.matrixData;
+                
+                dir.matrixData = {
+                    matrix: { rows: [] },
+                    specifications: { rows: [] },
+                    availableCounts: [],
+                    normalizedPercentages: normalizedMainTopicPercentages,
+                    subTopicPercentages: subTopicPercentages
+                };
                 
                 topicsWithMainTopics.forEach(topicInfo => {
                     const { mainTopic, subTopic } = topicInfo;
-                    if (!dir.matrixData) {
-                        dir.matrixData = createDefaultMatrixData(mainTopic, subTopic, grade);
-                    } else {
-                        addRowToMatrix(dir.matrixData, mainTopic, subTopic, grade);
-                    }
+                    addRowToMatrix(dir.matrixData, mainTopic, subTopic, grade, normalizedMainTopicPercentages, subTopicPercentages);
                 });
             };
 
             confirmFolderBtn.addEventListener('click', () => {
                 let folderName;
                 if (folderModalMode === 'create') {
-                    if (currentPath.length === 0) { // Creating at root
+                    if (currentPath.length === 0) {
                         const selectedGrade = document.getElementById('grade-select').value;
                         const description = document.getElementById('grade-desc-input').value.trim();
                         if (!selectedGrade) {
@@ -1150,9 +1389,9 @@
                             return;
                         }
                         folderName = `${selectedGrade} - ${description}`;
-                    } else if (currentPath.length === 1) { // Creating a topic folder
+                    } else if (currentPath.length === 1) {
                         folderName = folderNameSelect.value;
-                    } else { // Creating a generic folder deeper
+                    } else {
                         folderName = folderNameInput.value.trim();
                     }
                     
@@ -1171,7 +1410,7 @@
                     if (currentPath.length === 1) {
                         regenerateMatrix(parentDir);
                     }
-                } else { // Rename mode
+                } else {
                     const newName = folderNameInput.value.trim();
                     const oldName = itemToRename;
                     if (!newName) { showToast('Tên không được để trống.'); return; }
@@ -1216,28 +1455,31 @@
                 `;
 
                 // --- PAGE 1: KHUNG MA TRẬN ---
-                const totalMatrixPoints = data.matrix.rows.reduce((total, row) => {
-                    const tnkq = (parseInt(row[3]||0) + parseInt(row[5]||0) + parseInt(row[7]||0) + parseInt(row[9]||0));
-                    const tl = (parseInt(row[4]||0) + parseInt(row[6]||0) + parseInt(row[8]||0) + parseInt(row[10]||0));
-                    return total + (tnkq * pointsTNKQ) + (tl * pointsTL);
+                const totalTestPoints = data.matrix.rows.reduce((total, row) => {
+                    const tnkq_count = (parseInt(row[3]||0) + parseInt(row[5]||0) + parseInt(row[7]||0) + parseInt(row[9]||0));
+                    const tl_count = (parseInt(row[4]||0) + parseInt(row[6]||0) + parseInt(row[8]||0) + parseInt(row[10]||0));
+                    return total + (tnkq_count * pointsTNKQ) + (tl_count * pointsTL);
                 }, 0);
 
-                const groupedByChuDe = data.matrix.rows.reduce((acc, row) => {
-                    const chuDe = row[1];
-                    if (!acc[chuDe]) acc[chuDe] = [];
-                    acc[chuDe].push(row);
+                const groupedByMainTopic = data.matrix.rows.reduce((acc, row) => {
+                    const mainTopic = row[1];
+                    if (!acc[mainTopic]) acc[mainTopic] = [];
+                    acc[mainTopic].push(row);
                     return acc;
                 }, {});
 
+                const actualPercentages = data.subTopicPercentages || {};
+
                 let matrixBodyHtml = '<tbody>';
-                Object.values(groupedByChuDe).forEach(rows => {
+                Object.keys(groupedByMainTopic).forEach(mainTopic => {
+                    const rows = groupedByMainTopic[mainTopic];
                     const rowspan = rows.length;
-                    const chuDePoints = rows.reduce((total, row) => {
-                        const tnkq = (parseInt(row[3]||0) + parseInt(row[5]||0) + parseInt(row[7]||0) + parseInt(row[9]||0));
-                        const tl = (parseInt(row[4]||0) + parseInt(row[6]||0) + parseInt(row[8]||0) + parseInt(row[10]||0));
-                        return total + (tnkq * pointsTNKQ) + (tl * pointsTL);
+                    const mainTopicPercentage = Object.keys(actualPercentages).reduce((sum, subTopic) => {
+                        if (rows.some(row => row[2] === subTopic)) {
+                            return sum + (actualPercentages[subTopic] || 0);
+                        }
+                        return sum;
                     }, 0);
-                    const chuDePercentage = totalMatrixPoints > 0 ? (chuDePoints / totalMatrixPoints * 100).toFixed(0) : 0;
 
                     rows.forEach((row, rowIndex) => {
                         matrixBodyHtml += '<tr>';
@@ -1255,7 +1497,7 @@
                         }
 
                         if (rowIndex === 0) {
-                            matrixBodyHtml += `<td rowspan="${rowspan}">${chuDePercentage}%</td>`;
+                            matrixBodyHtml += `<td rowspan="${rowspan}">${mainTopicPercentage}%</td>`;
                         }
                         matrixBodyHtml += '</tr>';
                     });
@@ -1266,7 +1508,7 @@
                 const totals = { cau: Array(11).fill(0), diem: Array(11).fill(0) };
                 data.matrix.rows.forEach(row => {
                     for (let i = 3; i <= 10; i++) {
-                        const cau = parseInt(row[i] || 0);
+                        const cau = parseInt(row[i], 10) || 0;
                         const isTNKQ = i % 2 !== 0;
                         totals.cau[i] += cau;
                         totals.diem[i] += cau * (isTNKQ ? pointsTNKQ : pointsTL);
@@ -1277,13 +1519,14 @@
                 const vd_diem = totals.diem[7] + totals.diem[8];
                 const vdc_diem = totals.diem[9] + totals.diem[10];
 
-                const nb_percent = totalMatrixPoints > 0 ? (nb_diem / totalMatrixPoints * 100).toFixed(0) : 0;
-                const th_percent = totalMatrixPoints > 0 ? (th_diem / totalMatrixPoints * 100).toFixed(0) : 0;
-                const vd_percent = totalMatrixPoints > 0 ? (vd_diem / totalMatrixPoints * 100).toFixed(0) : 0;
-                const vdc_percent = totalMatrixPoints > 0 ? (vdc_diem / totalMatrixPoints * 100).toFixed(0) : 0;
-
-                const nb_th_percent = parseInt(nb_percent) + parseInt(th_percent);
-                const vd_vdc_percent = parseInt(vd_percent) + parseInt(vdc_percent);
+                const totalPoints = nb_diem + th_diem + vd_diem + vdc_diem;
+                const nb_percent = totalPoints > 0 ? (nb_diem / totalPoints * 100) : 0;
+                const th_percent = totalPoints > 0 ? (th_diem / totalPoints * 100) : 0;
+                const vd_percent = totalPoints > 0 ? (vd_diem / totalPoints * 100) : 0;
+                const vdc_percent = totalPoints > 0 ? (vdc_diem / totalPoints * 100) : 0;
+                
+                const nb_th_percent = nb_percent + th_percent;
+                const vd_vdc_percent = vd_percent + vdc_percent;
 
                 let matrixFooterHtml = `
                     <tfoot>
@@ -1293,21 +1536,21 @@
                             <td colspan="2"><b>${totals.cau[5] + totals.cau[6]} câu - ${formatDiem(th_diem)}đ</b></td>
                             <td colspan="2"><b>${totals.cau[7] + totals.cau[8]} câu - ${formatDiem(vd_diem)}đ</b></td>
                             <td colspan="2"><b>${totals.cau[9] + totals.cau[10]} câu - ${formatDiem(vdc_diem)}đ</b></td>
-                            <td><b>100%</b></td>
+                            <td><b>${formatDiem(totalPoints)}</b></td>
                         </tr>
                         <tr>
-                            <td colspan="3"><b>Tỉ lệ %</b></td>
-                            <td colspan="2"><b>${nb_percent}%</b></td>
-                            <td colspan="2"><b>${th_percent}%</b></td>
-                            <td colspan="2"><b>${vd_percent}%</b></td>
-                            <td colspan="2"><b>${vdc_percent}%</b></td>
-                            <td></td>
+                            <td colspan="3" class="text-right">Tỉ lệ điểm (%)</td>
+                            <td colspan="2"><b>${nb_percent.toFixed(0)}%</b></td>
+                            <td colspan="2"><b>${th_percent.toFixed(0)}%</b></td>
+                            <td colspan="2"><b>${vd_percent.toFixed(0)}%</b></td>
+                            <td colspan="2"><b>${vdc_percent.toFixed(0)}%</b></td>
+                            <td>100%</td>
                         </tr>
                         <tr>
-                            <td colspan="3"><b>Tỉ lệ chung</b></td>
-                            <td colspan="4"><b>${nb_th_percent}%</b></td>
-                            <td colspan="4"><b>${vd_vdc_percent}%</b></td>
-                            <td></td>
+                            <td colspan="3" class="text-right">Tỉ lệ chung (%)</td>
+                            <td colspan="4"><b>${nb_th_percent.toFixed(0)}%</b></td>
+                            <td colspan="4"><b>${vd_vdc_percent.toFixed(0)}%</b></td>
+                            <td>100%</td>
                         </tr>
                     </tfoot>`;
 
@@ -1383,12 +1626,12 @@
                     totalVDC_spec += parseInt((r[7] || '0-0').split('-')[1],10)||0;
                 });
                 const totalSpecPoints = (totalNB_spec + totalTH_spec) * pointsTNKQ + (totalVD_spec + totalVDC_spec) * pointsTL;
-                const spec_nb_percent = totalSpecPoints > 0 ? (((totalNB_spec*pointsTNKQ)/totalSpecPoints)*100).toFixed(0) : 0;
-                const spec_th_percent = totalSpecPoints > 0 ? (((totalTH_spec*pointsTNKQ)/totalSpecPoints)*100).toFixed(0) : 0;
-                const spec_vd_percent = totalSpecPoints > 0 ? (((totalVD_spec*pointsTL)/totalSpecPoints)*100).toFixed(0) : 0;
-                const spec_vdc_percent = totalSpecPoints > 0 ? (((totalVDC_spec*pointsTL)/totalSpecPoints)*100).toFixed(0) : 0;
-                const spec_nb_th_percent = parseInt(spec_nb_percent) + parseInt(spec_th_percent);
-                const spec_vd_vdc_percent = parseInt(spec_vd_percent) + parseInt(spec_vdc_percent);
+                const spec_nb_percent = totalSpecPoints > 0 ? (((totalNB_spec*pointsTNKQ)/totalSpecPoints)*100) : 0;
+                const spec_th_percent = totalSpecPoints > 0 ? (((totalTH_spec*pointsTNKQ)/totalSpecPoints)*100) : 0;
+                const spec_vd_percent = totalSpecPoints > 0 ? (((totalVD_spec*pointsTL)/totalSpecPoints)*100) : 0;
+                const spec_vdc_percent = totalSpecPoints > 0 ? (((totalVDC_spec*pointsTL)/totalSpecPoints)*100) : 0;
+                const spec_nb_th_percent = spec_nb_percent + spec_th_percent;
+                const spec_vd_vdc_percent = spec_vd_percent + spec_vdc_percent;
 
                 let specFooterHtml = `
                     <tfoot>
@@ -1399,13 +1642,13 @@
                         </tr>
                         <tr>
                             <td colspan="4" class="text-left"><b>Tỉ lệ %</b></td>
-                            <td><b>${spec_nb_percent}%</b></td><td><b>${spec_th_percent}%</b></td>
-                            <td><b>${spec_vd_percent}%</b></td><td><b>${spec_vdc_percent}%</b></td>
+                            <td><b>${spec_nb_percent.toFixed(0)}%</b></td><td><b>${spec_th_percent.toFixed(0)}%</b></td>
+                            <td><b>${spec_vd_percent.toFixed(0)}%</b></td><td><b>${spec_vdc_percent.toFixed(0)}%</b></td>
                         </tr>
                         <tr>
                             <td colspan="4" class="text-left"><b>Tỉ lệ chung</b></td>
-                            <td colspan="2"><b>${spec_nb_th_percent}%</b></td>
-                            <td colspan="2"><b>${spec_vd_vdc_percent}%</b></td>
+                            <td colspan="2"><b>${spec_nb_th_percent.toFixed(0)}%</b></td>
+                            <td colspan="2"><b>${spec_vd_vdc_percent.toFixed(0)}%</b></td>
                         </tr>
                     </tfoot>`;
 
@@ -1434,7 +1677,6 @@
 
             const updateMatrixFromTopicFolder = (loaiDeDir, topicFolder) => {
                 if (!loaiDeDir || !topicFolder || !loaiDeDir.matrixData) {
-                    console.error("Không thể cập nhật ma trận: Thiếu thư mục hoặc dữ liệu ma trận.");
                     return;
                 }
 
@@ -1464,18 +1706,71 @@
                     return;
                 }
 
-                // Cập nhật số lượng câu hỏi có sẵn
                 loaiDeDir.matrixData.availableCounts[rowIndex] = totalCounts;
+                
                 loaiDeDir.matrixData.specifications.rows[rowIndex][4] = `${totalCounts.NB.TN || 0}-${totalCounts.NB.TL || 0}`;
                 loaiDeDir.matrixData.specifications.rows[rowIndex][5] = `${totalCounts.TH.TN || 0}-${totalCounts.TH.TL || 0}`;
                 loaiDeDir.matrixData.specifications.rows[rowIndex][6] = `${totalCounts.VD.TN || 0}-${totalCounts.VD.TL || 0}`;
                 loaiDeDir.matrixData.specifications.rows[rowIndex][7] = `${totalCounts.VDC.TN || 0}-${totalCounts.VDC.TL || 0}`;
                 
-                // Cập nhật bảng ma trận từ số liệu mới
                 updateMatrixFromSpec(rowIndex, loaiDeDir); 
-                
-                // Đã xóa dòng showToast ở đây
             };
+
+            const updateMatrixFromSpec = (rowIndex, targetDir) => {
+                const directory = targetDir || getCurrentDirectory();
+                if (!directory || !directory.matrixData) return;
+                
+                const specRow = directory.matrixData.specifications.rows[rowIndex];
+                
+                const [nb_tn, nb_tl] = (specRow[4] || '0-0').split('-').map(n => n.trim() || '0');
+                directory.matrixData.matrix.rows[rowIndex][3] = nb_tn;
+                directory.matrixData.matrix.rows[rowIndex][4] = nb_tl;
+
+                const [th_tn, th_tl] = (specRow[5] || '0-0').split('-').map(n => n.trim() || '0');
+                directory.matrixData.matrix.rows[rowIndex][5] = th_tn;
+                directory.matrixData.matrix.rows[rowIndex][6] = th_tl;
+                
+                const [vd_tn, vd_tl] = (specRow[6] || '0-0').split('-').map(n => n.trim() || '0');
+                directory.matrixData.matrix.rows[rowIndex][7] = vd_tn;
+                directory.matrixData.matrix.rows[rowIndex][8] = vd_tl;
+                
+                const [vdc_tn, vdc_tl] = (specRow[7] || '0-0').split('-').map(n => n.trim() || '0');
+                directory.matrixData.matrix.rows[rowIndex][9] = vdc_tn;
+                directory.matrixData.matrix.rows[rowIndex][10] = vdc_tl;
+
+                updateRowTotals(rowIndex);
+            };
+
+            const updateMatrixData = (cell, newValue) => {
+                const currentDir = getCurrentDirectory();
+                if (!currentDir || !currentDir.matrixData) return;
+                
+                const row = parseInt(cell.dataset.row, 10);
+                const col = parseInt(cell.dataset.col, 10);
+                
+                const specRow = currentDir.matrixData.specifications.rows[row];
+                
+                // Get original values to preserve the other part
+                let [nb_tn, nb_tl]   = (specRow[4] || '0-0').split('-').map(n => n.trim());
+                let [th_tn, th_tl]   = (specRow[5] || '0-0').split('-').map(n => n.trim());
+                let [vd_tn, vd_tl]   = (specRow[6] || '0-0').split('-').map(n => n.trim());
+                let [vdc_tn, vdc_tl] = (specRow[7] || '0-0').split('-').map(n => n.trim());
+
+                if (col === 4) { // NB-TN
+                    specRow[4] = `${newValue}-${nb_tl}`;
+                } else if (col === 5) { // TH-TN
+                    specRow[5] = `${newValue}-${th_tl}`;
+                } else if (col === 6) { // VD-TL
+                    specRow[6] = `${vd_tn}-${newValue}`;
+                } else if (col === 7) { // VDC-TL
+                    specRow[7] = `${vdc_tn}-${newValue}`;
+                }
+
+                updateMatrixFromSpec(row, currentDir);
+                 // Re-render the matrix to show updated totals immediately
+                renderMatrix(currentDir.matrixData, true);
+            };
+
 
             const makeCellEditable = (cell) => {
                 if (cell.querySelector('input')) return;
@@ -1489,7 +1784,6 @@
                 input.focus();
                 input.select();
 
-                // Show tooltip
                 if (currentDir.matrixData.availableCounts && currentDir.matrixData.availableCounts[row]) {
                     const counts = currentDir.matrixData.availableCounts[row];
                     let tooltipText = '';
@@ -1547,90 +1841,286 @@
                     }
                 });
             };
-
-            const updateRowTotals = (rowIndex) => {
-                const currentDir = getCurrentDirectory();
-                if (!currentDir || !currentDir.matrixData) return;
-                const rowData = currentDir.matrixData.matrix.rows[rowIndex];
-                let rowTotal = 0;
-                for (let i = 3; i <= 10; i++) {
-                    rowTotal += parseInt(rowData[i], 10) || 0;
-                }
-                rowData[11] = rowTotal;
-            };
             
-            const updateMatrixFromSpec = (rowIndex, targetDir) => {
-                // The target directory (loaiDeDir) is passed explicitly
-                const directory = targetDir || getCurrentDirectory();
-                if (!directory || !directory.matrixData) return;
-                
-                const specRow = directory.matrixData.specifications.rows[rowIndex];
-                
-                // NB-TNKQ, NB-TL
-                const [nb_tn, nb_tl] = (specRow[4] || '0-0').split('-').map(n => n.trim() || '0');
-                directory.matrixData.matrix.rows[rowIndex][3] = nb_tn;
-                directory.matrixData.matrix.rows[rowIndex][4] = nb_tl;
-
-                // TH-TNKQ, TH-TL
-                const [th_tn, th_tl] = (specRow[5] || '0-0').split('-').map(n => n.trim() || '0');
-                directory.matrixData.matrix.rows[rowIndex][5] = th_tn;
-                directory.matrixData.matrix.rows[rowIndex][6] = th_tl;
-                
-                // VD-TNKQ, VD-TL
-                const [vd_tn, vd_tl] = (specRow[6] || '0-0').split('-').map(n => n.trim() || '0');
-                directory.matrixData.matrix.rows[rowIndex][7] = vd_tn;
-                directory.matrixData.matrix.rows[rowIndex][8] = vd_tl;
-                
-                // VDC-TNKQ, VDC-TL
-                const [vdc_tn, vdc_tl] = (specRow[7] || '0-0').split('-').map(n => n.trim() || '0');
-                directory.matrixData.matrix.rows[rowIndex][9] = vdc_tn;
-                directory.matrixData.matrix.rows[rowIndex][10] = vdc_tl;
-
-                updateRowTotals(rowIndex);
-                // No need to re-render the whole matrix here, as the final render call will do it.
-            }
-
-            const updateMatrixData = (cell, newValue) => {
+            const distributeQuestions = () => {
                 const currentDir = getCurrentDirectory();
-                if (!currentDir || !currentDir.matrixData) return;
-
-                const row = parseInt(cell.dataset.row, 10);
-                const col = parseInt(cell.dataset.col, 10);
-                
-                const specRow = currentDir.matrixData.specifications.rows[row];
-                
-                // Get original values to preserve the other part
-                let [nb_tn, nb_tl]   = (specRow[4] || '0-0').split('-').map(n => n.trim());
-                let [th_tn, th_tl]   = (specRow[5] || '0-0').split('-').map(n => n.trim());
-                let [vd_tn, vd_tl]   = (specRow[6] || '0-0').split('-').map(n => n.trim());
-                let [vdc_tn, vdc_tl] = (specRow[7] || '0-0').split('-').map(n => n.trim());
-
-                if (col === 4) { // NB-TN
-                    currentDir.matrixData.specifications.rows[row][4] = `${newValue}-${nb_tl}`;
-                } else if (col === 5) { // TH-TN
-                    currentDir.matrixData.specifications.rows[row][5] = `${newValue}-${th_tl}`;
-                } else if (col === 6) { // VD-TL
-                    currentDir.matrixData.specifications.rows[row][6] = `${vd_tn}-${newValue}`;
-                } else if (col === 7) { // VDC-TL
-                    currentDir.matrixData.specifications.rows[row][7] = `${vdc_tn}-${newValue}`;
+                if (!currentDir || !currentDir.matrixData || currentDir.matrixData.matrix.rows.length === 0) {
+                    showToast("Không có chủ đề nào để phân bổ câu hỏi.");
+                    return;
                 }
 
-                updateMatrixFromSpec(row);
-                 // Re-render the matrix to show updated totals immediately
+                const gradeName = currentDir.name;
+                
+                const subTopicPercentages = currentDir.matrixData.subTopicPercentages || {};
+                const totalSubTopicPercentage = Object.values(subTopicPercentages).reduce((sum, p) => sum + p, 0);
+
+                if (totalSubTopicPercentage !== 100) {
+                    showToast(`Tổng tỷ lệ phần trăm phải bằng 100%, hiện tại là ${totalSubTopicPercentage}%. Vui lòng điều chỉnh trước khi phân bổ.`, true);
+                    return;
+                }
+                
+                const topicsWithoutFiles = currentDir.children.filter(topic => topic.children && topic.children.length === 0);
+                if (topicsWithoutFiles.length > 0) {
+                    const topicNames = topicsWithoutFiles.map(t => `'${t.name}'`).join(', ');
+                    showToast(`Chủ đề ${topicNames} chưa có câu hỏi. Vui lòng tải lên tệp JSON.`);
+                    return;
+                }
+                
+                const totalAvailable = currentDir.matrixData.availableCounts.reduce((acc, counts) => {
+                    acc.NB.TN += counts.NB.TN; acc.NB.TL += counts.NB.TL;
+                    acc.TH.TN += counts.TH.TN; acc.TH.TL += counts.TH.TL;
+                    acc.VD.TN += counts.VD.TN; acc.VD.TL += counts.VD.TL;
+                    acc.VDC.TN += counts.VDC.TN; acc.VDC.TL += counts.VDC.TL;
+                    return acc;
+                }, { NB: {TN: 0, TL: 0}, TH: {TN: 0, TL: 0}, VD: {TN: 0, TL: 0}, VDC: {TN: 0, TL: 0} });
+                
+                const totalTN_questions = 28;
+                const totalTL_questions = 3;
+                
+                const allRequirements = currentDir.matrixData.specifications.rows.map(row => getRequirementsHtml(gradeName, row[1], row[2]));
+
+                const hasVdcIndicator = allRequirements.some(req => req.includes("Vận dụng cao"));
+                const hasVdIndicator = allRequirements.some(req => req.includes("Vận dụng"));
+                
+                const totalNB_needed = 16;
+                const totalTH_needed = 12;
+                
+                let totalVD_needed = (hasVdIndicator && hasVdcIndicator) ? 2 : (hasVdIndicator ? 3 : 0);
+                let totalVDC_needed = (hasVdIndicator && hasVdcIndicator) ? 1 : (hasVdcIndicator ? 3 : 0);
+
+                let overallErrors = [];
+                if (totalAvailable.NB.TN < totalNB_needed) {
+                    overallErrors.push(`Số câu hỏi Nhận biết cần ${totalNB_needed} nhưng kho chỉ có ${totalAvailable.NB.TN}.`);
+                }
+                if (totalAvailable.TH.TN < totalTH_needed) {
+                     overallErrors.push(`Số câu hỏi Thông hiểu cần ${totalTH_needed} nhưng kho chỉ có ${totalAvailable.TH.TN}.`);
+                }
+                if (hasVdIndicator && totalAvailable.VD.TL < totalVD_needed) {
+                    overallErrors.push(`Số câu hỏi Vận dụng cần ${totalVD_needed} nhưng kho chỉ có ${totalAvailable.VD.TL}.`);
+                }
+                if (hasVdcIndicator && totalAvailable.VDC.TL < totalVDC_needed) {
+                    overallErrors.push(`Số câu hỏi Vận dụng cao cần ${totalVDC_needed} nhưng kho chỉ có ${totalAvailable.VDC.TL}.`);
+                }
+                if (overallErrors.length > 0) {
+                     showToast(overallErrors.join('<br/>'));
+                     return;
+                }
+
+                currentDir.matrixData.specifications.rows.forEach(row => {
+                    row[4] = '0-0'; // NB
+                    row[5] = '0-0'; // TH
+                    row[6] = '0-0'; // VD
+                    row[7] = '0-0'; // VDC
+                });
+
+                const subTopicsByPercent = Object.entries(subTopicPercentages).sort(([, a], [, b]) => b - a);
+                
+                // Distribute TL questions first
+                const tl_levels = [{level: 'VDC', needed: totalVDC_needed, specCol: 7}, {level: 'VD', needed: totalVD_needed, specCol: 6}];
+                let remainingTL = totalTL_questions;
+
+                tl_levels.forEach(({level, needed, specCol}) => {
+                    if (needed === 0) return;
+                    let questions_to_distribute = needed;
+                    let candidates = subTopicsByPercent.filter(([subTopic]) => getRequirementsHtml(gradeName, currentDir.matrixData.specifications.rows.find(row => row[2] === subTopic)[1], subTopic).includes(level === 'VDC' ? "Vận dụng cao" : "Vận dụng"));
+                    
+                    const total_percent_of_candidates = candidates.reduce((sum, [, p]) => sum + p, 0);
+
+                    candidates.forEach(([subTopic]) => {
+                        if (questions_to_distribute <= 0) return;
+                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
+                        const available = currentDir.matrixData.availableCounts[rowIndex][level].TL;
+                        
+                        let allocated = 0;
+                        if(total_percent_of_candidates > 0) {
+                            allocated = Math.round((subTopicPercentages[subTopic] / total_percent_of_candidates) * needed);
+                        } else {
+                            allocated = Math.floor(needed / candidates.length) + (candidates.findIndex(([s]) => s === subTopic) < (needed % candidates.length) ? 1 : 0);
+                        }
+
+                        allocated = Math.min(allocated, available, questions_to_distribute, remainingTL);
+                        
+                        let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][specCol] || '0-0').split('-').map(Number);
+                        currentDir.matrixData.specifications.rows[rowIndex][specCol] = `${tn}-${allocated}`;
+                        questions_to_distribute -= allocated;
+                        remainingTL -= allocated;
+                    });
+                });
+                
+                // Distribute TN questions
+                let remainingTN = totalTN_questions;
+                let allocated_tn_per_level = {
+                    NB: totalNB_needed,
+                    TH: totalTH_needed
+                };
+                
+                const tn_levels = [{level: 'NB', needed: allocated_tn_per_level.NB, specCol: 4}, {level: 'TH', needed: allocated_tn_per_level.TH, specCol: 5}];
+                
+                tn_levels.forEach(({level, needed, specCol}) => {
+                    if (needed === 0) return;
+                    let questions_to_distribute = needed;
+                    let candidates = subTopicsByPercent.filter(([subTopic]) => getRequirementsHtml(gradeName, currentDir.matrixData.specifications.rows.find(row => row[2] === subTopic)[1], subTopic).includes(level === 'NB' ? "Nhận biết" : "Thông hiểu"));
+                    
+                    const total_percent_of_candidates = candidates.reduce((sum, [, p]) => sum + p, 0);
+
+                    candidates.forEach(([subTopic]) => {
+                        if (questions_to_distribute <= 0) return;
+                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
+                        const available = currentDir.matrixData.availableCounts[rowIndex][level].TN;
+                        
+                        let allocated = 0;
+                        if(total_percent_of_candidates > 0) {
+                            allocated = Math.round((subTopicPercentages[subTopic] / total_percent_of_candidates) * needed);
+                        } else {
+                            allocated = Math.floor(needed / candidates.length) + (candidates.findIndex(([s]) => s === subTopic) < (needed % candidates.length) ? 1 : 0);
+                        }
+
+                        allocated = Math.min(allocated, available, questions_to_distribute, remainingTN);
+                        
+                        let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][specCol] || '0-0').split('-').map(Number);
+                        currentDir.matrixData.specifications.rows[rowIndex][specCol] = `${allocated}-${tl}`;
+                        questions_to_distribute -= allocated;
+                        remainingTN -= allocated;
+                    });
+                });
+
+                // Final adjustment for rounding errors
+                let totalNB_allocated = currentDir.matrixData.specifications.rows.reduce((sum, row) => sum + parseInt((row[4]||'0-0').split('-')[0]), 0);
+                let totalTH_allocated = currentDir.matrixData.specifications.rows.reduce((sum, row) => sum + parseInt((row[5]||'0-0').split('-')[0]), 0);
+                let totalVD_allocated = currentDir.matrixData.specifications.rows.reduce((sum, row) => sum + parseInt((row[6]||'0-0').split('-')[1]), 0);
+                let totalVDC_allocated = currentDir.matrixData.specifications.rows.reduce((sum, row) => sum + parseInt((row[7]||'0-0').split('-')[1]), 0);
+                
+                let diff_NB = totalNB_needed - totalNB_allocated;
+                let diff_TH = totalTH_needed - totalTH_allocated;
+                let diff_VD = totalVD_needed - totalVD_allocated;
+                let diff_VDC = totalVDC_needed - totalVDC_allocated;
+                
+                if (diff_NB !== 0) {
+                    const sortedCandidates = subTopicsByPercent.filter(([subTopic]) => {
+                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
+                        const requirements = getRequirementsHtml(gradeName, currentDir.matrixData.specifications.rows[rowIndex][1], subTopic);
+                        const current_count = parseInt((currentDir.matrixData.specifications.rows[rowIndex][4] || '0-0').split('-')[0]);
+                        return requirements.includes("Nhận biết") && (diff_NB > 0 ? (current_count < currentDir.matrixData.availableCounts[rowIndex].NB.TN) : (current_count > 0));
+                    });
+                    
+                    sortedCandidates.forEach(([subTopic]) => {
+                        if (diff_NB === 0) return;
+                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
+                        let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][4] || '0-0').split('-').map(Number);
+                        if (diff_NB > 0) {
+                            tn++; diff_NB--;
+                        } else {
+                            tn--; diff_NB++;
+                        }
+                        currentDir.matrixData.specifications.rows[rowIndex][4] = `${tn}-${tl}`;
+                    });
+                }
+                
+                if (diff_TH !== 0) {
+                    const sortedCandidates = subTopicsByPercent.filter(([subTopic]) => {
+                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
+                        const requirements = getRequirementsHtml(gradeName, currentDir.matrixData.specifications.rows[rowIndex][1], subTopic);
+                        const current_count = parseInt((currentDir.matrixData.specifications.rows[rowIndex][5] || '0-0').split('-')[0]);
+                        return requirements.includes("Thông hiểu") && (diff_TH > 0 ? (current_count < currentDir.matrixData.availableCounts[rowIndex].TH.TN) : (current_count > 0));
+                    });
+                    
+                    sortedCandidates.forEach(([subTopic]) => {
+                        if (diff_TH === 0) return;
+                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
+                        let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][5] || '0-0').split('-').map(Number);
+                        if (diff_TH > 0) {
+                            tn++; diff_TH--;
+                        } else {
+                            tn--; diff_TH++;
+                        }
+                        currentDir.matrixData.specifications.rows[rowIndex][5] = `${tn}-${tl}`;
+                    });
+                }
+
+                if (diff_VD !== 0) {
+                    const sortedCandidates = subTopicsByPercent.filter(([subTopic]) => {
+                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
+                        const requirements = getRequirementsHtml(gradeName, currentDir.matrixData.specifications.rows[rowIndex][1], subTopic);
+                        const current_count = parseInt((currentDir.matrixData.specifications.rows[rowIndex][6] || '0-0').split('-')[1]);
+                        return requirements.includes("Vận dụng") && (diff_VD > 0 ? (current_count < currentDir.matrixData.availableCounts[rowIndex].VD.TL) : (current_count > 0));
+                    });
+                    
+                    sortedCandidates.forEach(([subTopic]) => {
+                        if (diff_VD === 0) return;
+                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
+                        let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][6] || '0-0').split('-').map(Number);
+                        if (diff_VD > 0) {
+                            tl++; diff_VD--;
+                        } else {
+                            tl--; diff_VD++;
+                        }
+                        currentDir.matrixData.specifications.rows[rowIndex][6] = `${tn}-${tl}`;
+                    });
+                }
+
+                if (diff_VDC !== 0) {
+                    const sortedCandidates = subTopicsByPercent.filter(([subTopic]) => {
+                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
+                        const requirements = getRequirementsHtml(gradeName, currentDir.matrixData.specifications.rows[rowIndex][1], subTopic);
+                        const current_count = parseInt((currentDir.matrixData.specifications.rows[rowIndex][7] || '0-0').split('-')[1]);
+                        return requirements.includes("Vận dụng cao") && (diff_VDC > 0 ? (current_count < currentDir.matrixData.availableCounts[rowIndex].VDC.TL) : (current_count > 0));
+                    });
+                    
+                    sortedCandidates.forEach(([subTopic]) => {
+                        if (diff_VDC === 0) return;
+                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
+                        let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][7] || '0-0').split('-').map(Number);
+                        if (diff_VDC > 0) {
+                            tl++; diff_VDC--;
+                        } else {
+                            tl--; diff_VDC++;
+                        }
+                        currentDir.matrixData.specifications.rows[rowIndex][7] = `${tn}-${tl}`;
+                    });
+                }
+
+
+                currentDir.matrixData.specifications.rows.forEach((row, index) => {
+                    updateMatrixFromSpec(index, currentDir);
+                });
+                
+                showToast("Đã phân bổ câu hỏi thành công!", false);
                 renderMatrix(currentDir.matrixData, true);
             };
 
             matrixContent.addEventListener('click', (e) => {
                 const cell = e.target.closest('.editable-cell');
-                if (cell) makeCellEditable(cell);
-                
+                if (cell) {
+                    makeCellEditable(cell);
+                    return;
+                }
+
                 const deleteBtn = e.target.closest('.delete-row-btn'); 
                 if (deleteBtn) { 
                     const indexToDelete = parseInt(deleteBtn.dataset.index, 10); 
                     if (!isNaN(indexToDelete)) handleDeleteRow(indexToDelete); 
                 }
+
+                const percentageCell = e.target.closest('.editable-percentage');
+                if (percentageCell) {
+                    const currentDir = getCurrentDirectory();
+                    if (currentDir && currentDir.matrixData) {
+                        showPercentageModal(currentDir.matrixData.subTopicPercentages, (newSubTopicPercentages) => {
+                            let totalSum = Object.values(newSubTopicPercentages).reduce((sum, p) => sum + p, 0);
+                            if (totalSum !== 100) {
+                                showToast(`Tổng tỷ lệ phải bằng 100%, hiện tại là ${totalSum}%. Vui lòng điều chỉnh.`);
+                                return;
+                            }
+                            currentDir.matrixData.subTopicPercentages = newSubTopicPercentages;
+                            regenerateMatrix(currentDir);
+                            renderMatrix(currentDir.matrixData, true);
+                            showToast("Đã cập nhật tỷ lệ phần trăm thành công!", false);
+                        });
+                    }
+                }
             });
 
+            distributeBtn.addEventListener('click', distributeQuestions);
 
             fileExplorer.addEventListener('click', (e) => {
                 const checkbox = e.target.closest('.item-checkbox');
@@ -1678,7 +2168,6 @@
                                 if (!data.thongTinChung || (!data.thongTinChung.bai) || (!data.tracNghiem && !data.tuLuan) ) {
                                     throw new Error("Cấu trúc không hợp lệ hoặc thiếu thuộc tính 'bai'");
                                 }
-                                // Giữ lại tên tệp gốc
                                 resolve({ name: file.name, content: data, status: 'fulfilled' });
                             } catch (err) {
                                 showToast(`Lỗi tệp JSON "${file.name}": ${err.message}`);
@@ -1690,7 +2179,7 @@
                 });
 
                 Promise.all(filePromises).then(results => {
-                    const currentTopicDir = getCurrentDirectory(); // Đây là thư mục chủ đề
+                    const currentTopicDir = getCurrentDirectory();
                     let filesProcessed = false;
                     
                     results.forEach(result => {
@@ -1710,16 +2199,13 @@
                     if (filesProcessed) {
                         const loaiDePath = [currentPath[0]];
                         const loaiDeDir = findDirectory(loaiDePath);
-                        // Tổng hợp lại tất cả các tệp trong thư mục và cập nhật ma trận
                         updateMatrixFromTopicFolder(loaiDeDir, currentTopicDir);
-                        
-                        // Sau khi xử lý, quay lại một cấp và vẽ lại để hiển thị ma trận đã cập nhật
                         currentPath.pop();
                         render();
                     }
                 });
 
-                e.target.value = null; // Đặt lại input tệp
+                e.target.value = null;
              });
             
             printBtn.addEventListener('click', () => {
@@ -1729,8 +2215,8 @@
                     const printWindow = window.open('', '_blank');
                     printWindow.document.write(printHtml);
                     printWindow.document.close();
-                    printWindow.focus(); // Cần thiết cho một số trình duyệt
-                    setTimeout(() => { // Timeout đảm bảo nội dung được tải trước khi hộp thoại in xuất hiện
+                    printWindow.focus();
+                    setTimeout(() => {
                         printWindow.print();
                         printWindow.close();
                     }, 500);
@@ -1745,8 +2231,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
