@@ -288,7 +288,7 @@
                     <button id="generate-doc-btn" class="btn btn-success"><i class="fa-solid fa-rocket"></i> Tạo Tài Liệu</button>
                     <button id="export-json-btn" class="btn btn-warning"><i class="fa-solid fa-file-export"></i> Xuất JSON</button>
                     <label for="json-import-input" class="btn btn-info"><i class="fa-solid fa-file-import"></i> Nhập JSON</label>
-                    <input type="file" id="json-import-input" accept=".json" style="display: none;">
+                    <input type="file" id="json-import-input" accept=".json" style="display: none;" multiple>
                 </div>
 
                 <div class="output-container card" id="output-container">
@@ -970,25 +970,72 @@ ANSWER KEYS
         },
         // --- JSON IMPORT ---
         handleJsonImport(event) {
-            const file = event.target.files[0];
-            if (!file) return;
+            const files = event.target.files;
+            if (!files.length) return;
 
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    this.populateFormFromJson(data);
-                    this.showAlert('Đã nhập thành công dữ liệu từ file JSON!');
-                } catch (error) {
-                    this.showAlert('Lỗi: File JSON không hợp lệ hoặc có cấu trúc sai.\n' + error);
-                } finally {
-                    event.target.value = null;
-                }
-            };
-            reader.onerror = () => {
-                this.showAlert('Đã xảy ra lỗi khi đọc file.');
-            };
-            reader.readAsText(file);
+            const allTracNghiem = [];
+            const allTuLuan = [];
+            let thongTinChung = null;
+            let filesProcessed = 0;
+            const totalFiles = files.length;
+            let errors = [];
+
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if (!data.thongTinChung || !data.tracNghiem || !data.tuLuan) {
+                            throw new Error(`Cấu trúc không đúng.`);
+                        }
+                        if (!thongTinChung) {
+                            thongTinChung = data.thongTinChung;
+                        }
+                        allTracNghiem.push(...data.tracNghiem);
+                        allTuLuan.push(...data.tuLuan);
+                    } catch (error) {
+                        errors.push(`File "${file.name}": ${error.message}`);
+                    } finally {
+                        filesProcessed++;
+                        if (filesProcessed === totalFiles) {
+                            if (thongTinChung) {
+                                this.populateFormFromJson({
+                                    thongTinChung: thongTinChung,
+                                    tracNghiem: allTracNghiem,
+                                    tuLuan: allTuLuan
+                                });
+                            }
+                            let successCount = totalFiles - errors.length;
+                            let alertMessage = `Hoàn tất nhập liệu.\n- Thành công: ${successCount} file.\n- Thất bại: ${errors.length} file.`;
+                            if (errors.length > 0) {
+                                alertMessage += `\n\nChi tiết lỗi:\n- ${errors.join('\n- ')}`;
+                            }
+                            this.showAlert(alertMessage, 'Kết quả nhập JSON');
+                        }
+                    }
+                };
+                reader.onerror = () => {
+                    errors.push(`File "${file.name}": Không thể đọc file.`);
+                    filesProcessed++;
+                    if (filesProcessed === totalFiles) {
+                         if (thongTinChung) {
+                                this.populateFormFromJson({
+                                    thongTinChung: thongTinChung,
+                                    tracNghiem: allTracNghiem,
+                                    tuLuan: allTuLuan
+                                });
+                            }
+                        let successCount = totalFiles - errors.length;
+                        let alertMessage = `Hoàn tất nhập liệu.\n- Thành công: ${successCount} file.\n- Thất bại: ${errors.length} file.`;
+                        if (errors.length > 0) {
+                            alertMessage += `\n\nChi tiết lỗi:\n- ${errors.join('\n- ')}`;
+                        }
+                        this.showAlert(alertMessage, 'Kết quả nhập JSON');
+                    }
+                };
+                reader.readAsText(file);
+            });
+            event.target.value = null; // Reset input
         },
         populateFormFromJson(data) {
             if (!data.thongTinChung || !data.tracNghiem || !data.tuLuan) {
