@@ -317,7 +317,42 @@
             let folderModalMode = 'create'; // 'create' or 'rename'
             let itemToRename = null;
             let clipboard = null;
+			// =======================================================
+// === BẮT ĐẦU MÃ NGUỒN CẢI TIẾN LƯU TRỮ DỮ LIỆU ===
+// =======================================================
 
+// Hàm để lưu toàn bộ cây thư mục vào bộ nhớ trình duyệt
+const saveFileSystem = () => {
+    try {
+        localStorage.setItem('matrixFileSystem', JSON.stringify(fileSystem));
+        // Dòng trên sẽ chuyển toàn bộ dữ liệu thư mục thành dạng chữ và lưu lại.
+    } catch (e) {
+        console.error("Lỗi khi lưu dữ liệu:", e);
+        showToast("Không thể lưu trạng thái công việc.");
+    }
+};
+
+// Hàm để tải cây thư mục từ bộ nhớ trình duyệt khi mở trang
+const loadFileSystem = () => {
+    const savedData = localStorage.getItem('matrixFileSystem');
+    if (savedData) {
+        try {
+            fileSystem = JSON.parse(savedData);
+            // Dòng trên sẽ đọc dữ liệu đã lưu và khôi phục lại.
+        } catch (e) {
+            console.error("Lỗi khi tải dữ liệu:", e);
+            // Nếu dữ liệu cũ bị lỗi, ta bắt đầu lại với thư mục trống
+            fileSystem = { name: 'Thư mục gốc', type: 'folder', children: [] };
+        }
+    }
+};
+
+// Gọi hàm tải dữ liệu ngay khi trang được mở
+loadFileSystem(); 
+
+// =======================================================
+// === KẾT THÚC MÃ NGUỒN CẢI TIẾN LƯU TRỮ DỮ LIỆU ===
+// =======================================================
             // --- Data ---
             const requirementsData = {
                 "Lớp 6": {
@@ -614,7 +649,8 @@
                 if (destDir.children.some(c => c.name === itemToMove.name)) { showToast(`"${destDir.name}" đã chứa một mục tên là "${itemToMove.name}".`); return; }
                 if (itemToMove.type === 'folder') { let destPathStr = [...currentPath, destDir.name].join('/'); let sourcePathStr = [...draggedItemInfo.sourcePath, itemToMove.name].join('/'); if (destPathStr.startsWith(sourcePathStr)) { showToast("Không thể di chuyển thư mục vào thư mục con của nó."); return; } }
                 sourceParentDir.children.splice(itemIndex, 1); destDir.children.push(itemToMove); clearSelection(); render(); showToast(`Đã di chuyển "${itemToMove.name}" vào "${destDir.name}".`, false);
-            };
+				saveFileSystem();
+			};
 
             const handleDeleteRow = (indexToDelete) => {
                 const currentDir = getCurrentDirectory();
@@ -638,6 +674,7 @@
 
                     render();
                     showToast(`Đã xóa chủ đề "${subTopicName}".`, false);
+					saveFileSystem(); // <-- THÊM DÒNG NÀY VÀO CUỐI
                 }
             };
             
@@ -1190,6 +1227,7 @@
                         clearSelection();
                         render();
                         hideConfirmModal();
+						saveFileSystem(); // <-- THÊM DÒNG NÀY VÀO CUỐI
                     }
                 );
             };
@@ -1238,6 +1276,7 @@
 
                 clearSelection();
                 render();
+				saveFileSystem(); // <-- THÊM DÒNG NÀY VÀO CUỐI
             };
             
             const regenerateMatrix = (dir) => {
@@ -1429,6 +1468,7 @@
                 clearSelection();
                 render();
                 closeFolderModal();
+				saveFileSystem(); // <-- THÊM DÒNG NÀY VÀO CUỐI
             });
 
             const generatePrintHTML = (data) => {
@@ -1670,7 +1710,7 @@
                     </table>`;
 
                 return `
-                    <!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title>Bản in ma trận</title>${css}</head>
+                    <!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title> </title>${css}</head>
                     <body>${matrixTableHtml}${specTableHtml}</body></html>
                 `;
             };
@@ -1769,6 +1809,7 @@
                 updateMatrixFromSpec(row, currentDir);
                  // Re-render the matrix to show updated totals immediately
                 renderMatrix(currentDir.matrixData, true);
+				saveFileSystem(); // <-- THÊM DÒNG NÀY VÀO CUỐI
             };
 
 
@@ -2202,6 +2243,7 @@
                         updateMatrixFromTopicFolder(loaiDeDir, currentTopicDir);
                         currentPath.pop();
                         render();
+						saveFileSystem(); // <-- THÊM DÒNG NÀY VÀO CUỐI
                     }
                 });
 
