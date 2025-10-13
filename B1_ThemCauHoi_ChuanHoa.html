@@ -318,23 +318,49 @@
                 <h2><i class="fa-solid fa-layer-group"></i> Thêm hàng loạt câu hỏi trắc nghiệm</h2>
                 <button class="close-button" id="close-bulk-modal-btn">&times;</button>
             </div>
+            <p><strong>Các tiêu chí tham khảo (dựa trên lựa chọn của bạn):</strong></p>
+            <div id="bulk-criteria-list" style="max-height: 150px; overflow-y: auto; border: 1px solid #dee2e6; padding: 10px; border-radius: 5px; background: #f8f9fa; margin-bottom: 15px; font-size: 14px;">
+                    <!-- Dynamic content will be inserted here by JavaScript -->
+            </div>
             <div id="bulk-instructions">
-                <strong>Định dạng yêu cầu:</strong>
+                 <p>Tạo 20 câu hỏi trắc nghiệm hoặc điền khuyết dựa trên các tiêu chí mà tôi cung cấp.</p>
+                <p><strong>Yêu cầu:</strong></p>
                 <ul>
-                    <li>Dòng đầu tiên của câu hỏi có thể có hoặc không có số hiệu.</li>
-                    <li>Các câu hỏi phải được phân cách bằng một dòng trống.</li>
-                    <li>Thêm dấu <code>*</code> vào trước đáp án đúng.</li>
-                    <li>Thêm mục <code>ANSWER KEYS</code> ở cuối để cung cấp đáp án cho câu điền khuyết.</li>
+                    <li>Mã câu theo cú pháp <code>[mức].[mã tiêu chí].[STT]</code>
+                        <ul>
+                            <li>mức: 1 = NB, 2 = TH, 3 = VD, 4 = VDC</li>
+                            <li>mã tiêu chí: đúng theo tiêu chí tôi cung cấp</li>
+                            <li>STT: số thứ tự câu trong tiêu chí, bắt đầu từ 1</li>
+                        </ul>
+                    </li>
+                    <li>Chỉ tạo câu cho mức độ thực sự tồn tại trong tiêu chí. Nếu một nhóm mức độ không có tiêu chí, có thể lấy câu bổ sung từ các nhóm khác để đủ 20 câu.</li>
+                    <li>Nếu có nhiều đáp án đúng → dùng chữ cái a, b, c, d (với dấu * trước mỗi đáp án đúng). Nếu chỉ có 1 đáp án đúng → dùng chữ cái A, B, C, D.</li>
+                    <li>Thêm dấu <code>*</code> trước đáp án đúng.</li>
+                    <li>Cuối cùng thêm <code>ANSWER KEYS</code> cho các câu điền khuyết. Các câu điền khuyết phải để ở cuối sau tất cả câu trắc nghiệm.</li>
+                    <li>Chỉ hiển thị câu hỏi và đáp án, không giải thích, không thêm nội dung nào khác, không có các câu dẫn dắt.</li>
                 </ul>
-                <p><b>Ví dụ:</b></p>
-                <pre>Câu 1.1 (NB): Câu hỏi có số hiệu...
-*A. Đáp án A
-
-Câu 1.2 (TH): Câu hỏi 2 ____.
+                 <p><strong>Định dạng mẫu:</strong></p>
+                 <p><em>Câu có đáp án đúng duy nhất:</em></p>
+<pre>Câu [mức].[mã tiêu chí].[STT] ([Mức]): [Nội dung câu hỏi]
+*A. [Đáp án đúng]
+B. [Đáp án sai 1]
+C. [Đáp án sai 2]
+D. [Đáp án sai 3]</pre>
+                 <p><em>Câu có nhiều đáp án đúng:</em></p>
+<pre>Câu [mức].[mã tiêu chí].[STT] ([Mức]): [Nội dung câu hỏi]
+*a. [Đáp án đúng 1]
+*b. [Đáp án đúng 2]
+c. [Đáp án sai 1]
+d. [Đáp án sai 2]</pre>
+                <p><em>Câu điền khuyết:</em></p>
+<pre>Câu [mức].[mã tiêu chí].[STT] ([Mức]): Hoàn thành câu sau: [Câu hỏi]
 
 ANSWER KEYS
-1.2. đáp án điền khuyết</pre>
+[mức].[mã tiêu chí].[STT]. [Đáp án điền khuyết]</pre>
+                <p><strong>TIÊU CHÍ (người dùng sẽ nhập vào sau):</strong></p>
+                <p>Ví dụ:<br><em>1.1 Trình bày được sơ lược lịch sử phát triển máy tính.</em><br><em>2.1 Nêu được ví dụ cho thấy sự phát triển máy tính đem lại thay đổi lớn cho xã hội.</em></p>
             </div>
+            <button id="copy-instructions-btn" class="btn btn-primary" style="margin-bottom: 15px; width: auto;"><i class="fa-solid fa-copy"></i> Sao chép Hướng dẫn & Tiêu chí</button>
             <div class="form-group">
                 <textarea id="bulk-textarea" placeholder="Dán danh sách câu hỏi của bạn vào đây..."></textarea>
             </div>
@@ -803,24 +829,119 @@ ANSWER KEYS
             document.body.removeChild(a); 
             URL.revokeObjectURL(url); 
         },
-        copyToClipboard() { 
-            const content = document.getElementById('output-content').value; 
-            navigator.clipboard.writeText(content).then(() => { 
-                const button = document.getElementById('copy-btn'); 
-                const originalText = button.innerHTML; 
-                button.innerHTML = '<i class="fa-solid fa-check"></i> Đã sao chép!'; 
-                button.classList.remove('btn-secondary'); 
-                button.classList.add('btn-success'); 
-                setTimeout(() => { 
-                    button.innerHTML = originalText; 
-                    button.classList.remove('btn-success'); 
-                    button.classList.add('btn-secondary'); 
-                }, 2000); 
-            }); 
+        copyToClipboard() {
+            const content = document.getElementById('output-content').value;
+            const textArea = document.createElement("textarea");
+            textArea.value = content;
+            textArea.style.position = "fixed"; // Prevent scrolling to bottom of page in MS Edge.
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    const button = document.getElementById('copy-btn');
+                    const originalText = button.innerHTML;
+                    button.innerHTML = '<i class="fa-solid fa-check"></i> Đã sao chép!';
+                    button.classList.remove('btn-secondary');
+                    button.classList.add('btn-success');
+                    setTimeout(() => {
+                        button.innerHTML = originalText;
+                        button.classList.remove('btn-success');
+                        button.classList.add('btn-secondary');
+                    }, 2000);
+                } else {
+                     this.showAlert('Không thể sao chép nội dung.', 'Lỗi');
+                }
+            } catch (err) {
+                console.error('Không thể sao chép: ', err);
+                this.showAlert('Không thể sao chép nội dung.', 'Lỗi');
+            }
+            document.body.removeChild(textArea);
         },
         
+        copyInstructions() {
+            const instructionsElement = document.getElementById('bulk-instructions');
+            const criteriaElement = document.getElementById('bulk-criteria-list');
+            if (!instructionsElement || !criteriaElement) return;
+
+            let instructionsText = instructionsElement.innerText;
+            const usageMarker = "TIÊU CHÍ (người dùng sẽ nhập vào sau):";
+            const markerIndex = instructionsText.indexOf(usageMarker);
+            if (markerIndex !== -1) {
+                instructionsText = instructionsText.substring(0, markerIndex).trim();
+            }
+
+            const criteriaText = criteriaElement.innerText;
+            
+            let textToCopy = instructionsText;
+
+            // Append criteria if they are available and valid
+            if (criteriaText && !criteriaText.includes("Vui lòng chọn") && !criteriaText.includes("Không có dữ liệu")) {
+                 textToCopy += `\n\nTIÊU CHÍ:\n${criteriaText}`;
+            }
+
+            const textArea = document.createElement("textarea");
+            textArea.value = textToCopy;
+            textArea.style.position = "fixed";
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                const successful = document.execCommand('copy');
+                 if (successful) {
+                    const button = document.getElementById('copy-instructions-btn');
+                    const originalHTML = button.innerHTML;
+                    button.innerHTML = '<i class="fa-solid fa-check"></i> Đã sao chép!';
+                    button.disabled = true;
+                    setTimeout(() => {
+                        button.innerHTML = originalHTML;
+                        button.disabled = false;
+                    }, 2000);
+                } else {
+                    this.showAlert('Không thể sao chép hướng dẫn. Vui lòng thử lại.', 'Lỗi');
+                }
+            } catch (err) {
+                console.error('Không thể sao chép: ', err);
+                this.showAlert('Không thể sao chép hướng dẫn. Vui lòng thử lại.', 'Lỗi');
+            }
+            document.body.removeChild(textArea);
+        },
+
         // --- MODAL FUNCTIONS ---
-        openBulkAddModal() { document.getElementById('bulk-add-modal').classList.add('is-visible'); },
+        openBulkAddModal() {
+            const criteriaListDiv = document.getElementById('bulk-criteria-list');
+            criteriaListDiv.innerHTML = ''; // Clear previous criteria
+
+            const khoi = document.getElementById('khoi').value;
+            const bai = document.getElementById('bai').value;
+
+            if (!khoi || !bai) {
+                criteriaListDiv.innerHTML = '<p><em>Vui lòng chọn khối và bài trước để xem các tiêu chí gợi ý.</em></p>';
+            } else {
+                const baiData = this.criteriaData[khoi]?.[bai];
+                if (!baiData || Object.keys(baiData).length === 0) {
+                    criteriaListDiv.innerHTML = '<p><em>Không có dữ liệu tiêu chí cho bài này.</em></p>';
+                } else {
+                    let criteriaHtml = '<ul>';
+                    const levelOrder = ['NB', 'TH', 'VD', 'VDC'];
+                    levelOrder.forEach(level => {
+                        if (baiData[level]) {
+                            baiData[level].forEach(criterion => {
+                                criteriaHtml += `<li>${criterion}</li>`;
+                            });
+                        }
+                    });
+                    criteriaHtml += '</ul>';
+                    criteriaListDiv.innerHTML = criteriaHtml;
+                }
+            }
+            document.getElementById('bulk-add-modal').classList.add('is-visible');
+        },
         closeBulkAddModal() { document.getElementById('bulk-add-modal').classList.remove('is-visible'); },
         
         processBulkQuestions() {
@@ -1019,12 +1140,12 @@ ANSWER KEYS
                     filesProcessed++;
                     if (filesProcessed === totalFiles) {
                          if (thongTinChung) {
-                                this.populateFormFromJson({
-                                    thongTinChung: thongTinChung,
-                                    tracNghiem: allTracNghiem,
-                                    tuLuan: allTuLuan
-                                });
-                            }
+                            this.populateFormFromJson({
+                                thongTinChung: thongTinChung,
+                                tracNghiem: allTracNghiem,
+                                tuLuan: allTuLuan
+                            });
+                        }
                         let successCount = totalFiles - errors.length;
                         let alertMessage = `Hoàn tất nhập liệu.\n- Thành công: ${successCount} file.\n- Thất bại: ${errors.length} file.`;
                         if (errors.length > 0) {
@@ -1099,6 +1220,7 @@ ANSWER KEYS
             // Modal listeners
             document.getElementById('close-bulk-modal-btn').addEventListener('click', () => this.closeBulkAddModal());
             document.getElementById('process-bulk-btn').addEventListener('click', () => this.processBulkQuestions());
+            document.getElementById('copy-instructions-btn').addEventListener('click', () => this.copyInstructions());
             document.getElementById('close-alert-btn').addEventListener('click', () => this.closeAlertModal());
             
             // Close modals on outside click
