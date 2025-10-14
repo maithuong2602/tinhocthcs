@@ -193,7 +193,7 @@
                 <input type="text" id="monHoc" value="Tin học 6">
             </div>
             <div class="form-group">
-                <label for="thoiGian">Thời gian làm bài</label>
+                <label for="thoiGian">Thời gian</label>
                 <input type="text" id="thoiGian" value="45 phút">
             </div>
             <div class="modal-footer">
@@ -203,7 +203,7 @@
         </div>
     </div>
     
-     <!-- Modal thông báo tùy chỉnh -->
+    <!-- Modal thông báo tùy chỉnh -->
     <div id="alert-modal" class="modal">
         <div class="modal-content" style="max-width: 500px; text-align: center;">
             <div class="modal-header" style="justify-content: center; border-bottom: none;">
@@ -451,18 +451,18 @@
             
             generateWordAota(questions) {
                 let questionContent = questions.map((q, index) => {
-                    let questionHtml = `<p style="margin-top: 6pt; margin-bottom: 0;"><strong>Câu ${index + 1} (${(q.points || 0).toFixed(2)} điểm):</strong> ${q.noiDung}</p>`;
+                    let questionHtml = `<p style="margin-top: 6pt; margin-bottom: 0; font-size: 13pt;"><strong>Câu ${index + 1} (${(q.points || 0).toFixed(2)} điểm):</strong> ${q.noiDung}</p>`;
                     if (q.luaChon && q.luaChon.length > 0) {
                         const optionsHtml = q.luaChon.map((opt, i) => {
                             const prefix = q.loai === 'multiple-answer' ? `${String.fromCharCode(97 + i)})` : `${String.fromCharCode(65 + i)}.`;
-                            return `<div style="margin-left: 20px;">${opt.correct ? '*' : ''}${prefix} ${opt.text}</div>`;
+                            return `<div style="margin-left: 20px; font-size: 13pt;">${opt.correct ? '*' : ''}${prefix} ${opt.text}</div>`;
                         }).join('');
                         questionHtml += optionsHtml;
                     }
                     return questionHtml;
                 }).join('');
 
-                const answerKeyHtml = this.generateAnswerKeyHtml(questions, 'azota');
+                const answerKeyHtml = this.generateAnswerKeyHtml(questions, 'azota', {});
                 const fullHtml = `<div style="font-family: Times New Roman, serif; font-size: 13pt; line-height: 1.5; text-align: justify;">Phần 1. Trắc nghiệm${questionContent}${answerKeyHtml}</div>`;
                 return { html: fullHtml, filename: 'dapan_azota.doc' };
             },
@@ -477,89 +477,287 @@
                 };
 
                 const headerHtml = `
-                    <table style="width:100%; border: none; font-family: 'Times New Roman', serif;">
+                    <table style="width:100%; border: none; font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.5;">
                         <tr>
-                            <td style="text-align: center; width: 50%; vertical-align: top; font-weight: bold;">
+                            <td style="text-align: center; width: 50%; vertical-align: top;">
                                 <p style="margin:0; text-transform: uppercase;">${headerInfo.donVi}</p>
                                 <table style="margin: 0 auto; border: none; border-collapse: collapse; text-align: center;">
-                                    <tr><td style="padding:0; text-transform: uppercase;">${headerInfo.tenTruong}</td></tr>
-                                    <tr><td style="padding:0; border-top: 1px solid black; height: 1px;"></td></tr>
+                                    <tr><td style="padding:0 5px; text-transform: uppercase; font-weight: bold;">${headerInfo.tenTruong}</td></tr>
                                 </table>
                             </td>
-                            <td style="text-align: center; width: 50%; vertical-align: top; font-weight: bold;">
-                                ${headerInfo.tenKyThi.toUpperCase()}<br>
-                                Môn: ${headerInfo.monHoc}<br>
-                                <span style="font-style: italic; font-weight: normal;">Thời gian làm bài: ${headerInfo.thoiGian} (không kể thời gian giao đề)</span>
+                            <td style="text-align: center; width: 50%; vertical-align: top;">
+                                 <p style="margin:0; font-weight: bold; text-transform: uppercase;">${headerInfo.tenKyThi}</p>
+                                 <p style="margin:0;"><strong>Môn: ${headerInfo.monHoc}</strong></p>
+                                 <p style="margin:0;">Thời gian: ${headerInfo.thoiGian} <em>(không kể thời gian giao đề)</em></p>
+                                 <p style="margin:0; font-style: italic;">(Đề có 05 trang)</p>
                             </td>
                         </tr>
+                         <tr>
+                            <td style="text-align: center; padding-top: 10px;">
+                                <p style="margin:0; font-weight: bold;">ĐỀ CHÍNH THỨC</p>
+                            </td>
+                            <td></td>
+                         </tr>
                     </table>
-                    <p style="text-align: center; font-weight: bold; margin-top: 10pt;">ĐỀ CHÍNH THỨC</p>
-                    <table style="width: 100%; margin-top: 10pt;">
+                    <table style="width: 100%; margin-top: 10pt; font-size: 13pt;">
                         <tr>
                             <td style="width: 70%;"><strong>Họ và tên:</strong> .....................................................</td>
                             <td><strong>Lớp:</strong> ......................</td>
                         </tr>
                     </table>`;
 
-                const totalPoints = questions.reduce((sum, q) => sum + (q.points || 0), 0);
-                let tracNghiemCount = questions.filter(q => q.loai !== 'situation').length;
-                let answerGridHtml = `<p style="text-align: left; font-style: italic; margin-top: 6pt; margin-bottom: 0;">- Em hãy điền đáp án vào khung bên dưới cho câu trả lời đúng: (mỗi câu đúng ${(totalPoints/tracNghiemCount).toFixed(2)} điểm)</p>
-                                        <table style="width:100%; border-collapse: collapse; margin: 10pt 0;">`;
-                const cols = 12;
-                const rows = Math.ceil(tracNghiemCount / cols);
-                for (let i = 0; i < rows; i++) {
-                    answerGridHtml += '<tr>';
-                    for(let j=0; j<cols; j++) { const num = i * cols + j + 1; if(num <= tracNghiemCount) answerGridHtml += `<td style="border: 1px solid black; text-align: center; font-weight: bold; padding: 4px;">Câu ${num}</td>`; }
-                    answerGridHtml += '</tr><tr>';
-                    for(let j=0; j<cols; j++) { const num = i * cols + j + 1; if(num <= tracNghiemCount) answerGridHtml += `<td style="border: 1px solid black; height: 20px;"></td>`; }
-                    answerGridHtml += '</tr>';
-                }
-                answerGridHtml += '</table>';
+                // Phân loại lại câu hỏi: chỉ câu có loại 'tu-luan' mới là tự luận
+                const tuLuanQuestions = questions.filter(q => q.loai === 'tu-luan');
+                const tracNghiemQuestions = questions.filter(q => q.loai !== 'tu-luan');
 
-                let questionContent = questions.map((q, index) => {
-                    let questionHtml = `<p style="margin-top: 6pt; margin-bottom: 0;"><strong>Câu ${index + 1} (${(q.points || 0).toFixed(2)} điểm):</strong> ${q.noiDung}</p>`;
-                    if (q.luaChon && q.luaChon.length > 0) {
-                        const optionsHtml = q.luaChon.map((opt, i) => {
-                            const checkbox = `<span style="display: inline-block; width: 35px; text-align: center; border: 1px solid #000; margin-right: 8px; vertical-align: -5px;">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>`;
-                            const prefix = q.loai === 'multiple-answer' ? checkbox : `${String.fromCharCode(65 + i)}.`;
-                            return `<div style="margin-left: 20px;">${prefix} ${opt.text}</div>`;
-                        }).join('');
-                        questionHtml += optionsHtml;
+                let tracNghiemHtml = '';
+                if (tracNghiemQuestions.length > 0) {
+                    const tracNghiemTotalPoints = tracNghiemQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
+                    
+                    // Bảng điền đáp án luôn hiển thị đúng 28 câu
+                    const gridQuestionCount = 28;
+                    let answerGridHtml = '';
+
+                    answerGridHtml = `<p style="text-align: left; font-style: italic; margin-bottom: 0;">- Em hãy điền đáp án vào khung bên dưới cho câu trả lời đúng: (mỗi câu đúng 0,25 điểm)</p>
+                                    <p style="text-align: left; font-style: italic; margin-bottom: 0;">- Trong đề kiểm tra này sử dụng phần mềm MS Office 2016</p>
+                                    <table style="border-collapse: collapse; margin: 10pt 0;">`;
+                    const cols = 14;
+                    const rows = 2; // Luôn là 2 hàng cho 28 câu
+                    for (let i = 0; i < rows; i++) {
+                        answerGridHtml += '<tr>';
+                        for(let j=0; j<cols; j++) { 
+                            const num = i * cols + j + 1; 
+                            answerGridHtml += `<td style="border: 1px solid black; text-align: center; font-weight: bold; padding: 4px;">Câu ${num}</td>`;
+                        }
+                        answerGridHtml += '</tr><tr>';
+                        for(let j=0; j<cols; j++) { 
+                            answerGridHtml += `<td style="border: 1px solid black; height: 20px;"></td>`;
+                        }
+                        answerGridHtml += '</tr>';
                     }
-                    return questionHtml;
-                }).join('');
+                    answerGridHtml += '</table>';
+
+                    const questionContent = tracNghiemQuestions.map((q, index) => {
+                        let questionHtml = `<p style="margin-top: 6pt; margin-bottom: 0; font-size: 13pt;"><strong>Câu ${index + 1}.</strong> ${q.noiDung}</p>`;
+                        if (q.luaChon && q.luaChon.length > 0) {
+                            
+                            // Check if all options are short (less than 8 words)
+                            const allOptionsAreShort = q.luaChon.every(opt => (opt.text || '').trim().split(/\s+/).length < 8);
+
+                            let optionsHtml = '';
+                            if (allOptionsAreShort) {
+                                // Nếu tất cả các tùy chọn đều ngắn, sử dụng bố cục bảng hai cột bên trong một div có lề
+                                let tableContent = '<table style="width: 100%; border: none; border-collapse: collapse; table-layout: fixed;">';
+                                for (let i = 0; i < q.luaChon.length; i += 2) {
+                                    const opt1 = q.luaChon[i];
+                                    const opt2 = q.luaChon[i+1];
+                                    const prefix1 = `<strong>${String.fromCharCode(65 + i)}.</strong>`;
+                                    const prefix2 = opt2 ? `<strong>${String.fromCharCode(65 + i + 1)}.</strong>` : '';
+                                    tableContent += `<tr>
+                                        <td style="width: 50%; vertical-align: top; padding: 2pt 5pt 2pt 0; font-size: 13pt;">${prefix1} ${opt1.text}</td>
+                                        <td style="width: 50%; vertical-align: top; padding: 2pt 0 2pt 5pt; font-size: 13pt;">${opt2 ? `${prefix2} ${opt2.text}` : ''}</td>
+                                    </tr>`;
+                                }
+                                tableContent += '</table>';
+                                optionsHtml = `<div style="margin-left: 0.25cm;">${tableContent}</div>`;
+                            } else {
+                                // Ngược lại, hiển thị tất cả các tùy chọn trong một cột
+                                optionsHtml = q.luaChon.map((opt, i) => {
+                                    const prefix = `<strong>${String.fromCharCode(65 + i)}.</strong>`;
+                                    return `<div style="margin-left: 20px; padding: 2px 0; font-size: 13pt;">${prefix} ${opt.text}</div>`;
+                                }).join('');
+                            }
+                            questionHtml += optionsHtml;
+                        }
+                        return questionHtml;
+                    }).join('');
+                    
+                    tracNghiemHtml = `
+                        <h3 style="text-align:left; font-weight:bold;">Phần 1. Trắc nghiệm (${tracNghiemTotalPoints.toFixed(2)} điểm)</h3>
+                        ${answerGridHtml}
+                        ${questionContent}
+                    `;
+                }
                 
-                const answerKeyHtml = this.generateAnswerKeyHtml(questions, 'test');
-                const finalHtml = `<div style="font-family: Times New Roman, serif; font-size: 13pt; line-height: 1.5; margin: 0 auto; max-width: 800px; text-align: justify;">
+                let tuLuanHtml = '';
+                if (tuLuanQuestions.length > 0) {
+                    const tuLuanTotalPoints = tuLuanQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
+                    const questionContent = tuLuanQuestions.map((q, index) => {
+                         let questionHtml = `<p style="margin-top: 6pt; margin-bottom: 0; font-size: 13pt;"><strong>Câu ${index + tracNghiemQuestions.length + 1} (${(q.points || 0).toFixed(2)} điểm):</strong> ${q.noiDung}</p>`;
+                         const dottedLine = '<p style="font-size: 13pt; margin-top: 6pt; margin-bottom: 0;">.....................................................................................................................................</p>';
+                         questionHtml += dottedLine.repeat(5);
+                         return questionHtml;
+                    }).join('');
+
+                    tuLuanHtml = `
+                        <h3 style="text-align:left; font-weight:bold; margin-top: 15pt;">Phần 2. TỰ LUẬN (${tuLuanTotalPoints.toFixed(2)} điểm)</h3>
+                        ${questionContent}
+                    `;
+                }
+                
+                const answerKeyHtml = this.generateAnswerKeyHtml(questions, 'test', headerInfo);
+                const finalHtml = `<div style="font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.5; margin: 0 auto; max-width: 800px; text-align: justify;">
                     ${headerHtml}
-                    <h3 style="text-align:left; font-weight:bold;">Phần 1. Trắc nghiệm (${totalPoints.toFixed(2)} điểm)</h3>
-                    ${answerGridHtml}
-                    ${questionContent}
-                    <br/><p style="text-align: center;">---HẾT---</p></div>${answerKeyHtml}`;
+                    ${tracNghiemHtml}
+                    ${tuLuanHtml}
+                    <br/><p style="text-align: center; font-weight: bold;">---HẾT---</p></div><br clear=all style='page-break-before:always'>${answerKeyHtml}`;
                 return { html: finalHtml, filename: 'de_thi.doc' };
             },
             
-            generateAnswerKeyHtml(questions, type) {
-                let keyHtml = `<div style="font-family: Times New Roman, serif; font-size: 14pt; margin: 0 auto; max-width: 800px; page-break-before: always;"><h1 style="text-align: center;">${type === 'azota' ? 'ANSWER KEYS' : 'Bảng đáp án'}</h1></div>
-                                <div style="font-family: Times New Roman, serif; font-size: 12pt; margin: 0 auto; max-width: 800px;">`;
-                let answers = ``;
-                questions.forEach((q, index) => {
-                    const num = index + 1;
-                    if (q.loai === 'multiple-choice') {
-                        const correctIndex = (q.luaChon || []).findIndex(opt => opt.correct);
-                        if (correctIndex !== -1) answers += `<p>${num}. ${String.fromCharCode(65 + correctIndex)}</p>`;
-                    } else if (q.loai === 'multiple-answer') {
-                        let line = `<p><strong>Câu ${num}:</strong> `;
-                        (q.luaChon || []).forEach((opt, i) => {
-                            const label = String.fromCharCode(97 + i);
-                            line += `${label})${opt.correct ? 'Đ' : 'S'} `;
-                        });
-                        answers += line.trim() + '</p>';
-                    } else if (q.loai === 'fill-blank' && q.dapAn) {
-                        answers += `<p>${num}. ${q.dapAn}</p>`;
+            generateAnswerKeyHtml(questions, type, headerInfo) {
+                if (type === 'azota') {
+                    let keyHtml = `<div style="font-family: Times New Roman, serif; font-size: 14pt; margin: 0 auto; max-width: 800px; page-break-before: always;"><h1 style="text-align: center;">ANSWER KEYS</h1></div>
+                                    <div style="font-family: Times New Roman, serif; font-size: 13pt; margin: 0 auto; max-width: 800px;">`;
+                    let answers = ``;
+                    questions.forEach((q, index) => {
+                        const num = index + 1;
+                        if (q.luaChon && q.luaChon.length > 0 && q.loai !== 'multiple-answer') {
+                            const correctIndex = (q.luaChon || []).findIndex(opt => opt.correct);
+                            if (correctIndex !== -1) answers += `<p style="font-size: 13pt;">${num}. ${String.fromCharCode(65 + correctIndex)}</p>`;
+                        }
+                    });
+                    return keyHtml + answers + '</div>';
+                }
+
+                // Logic for 'test' type
+                const tuLuanQuestions = questions.filter(q => q.loai === 'tu-luan');
+                const tracNghiemQuestions = questions.filter(q => q.loai !== 'tu-luan');
+
+                const totalTracNghiemPoints = tracNghiemQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
+                const totalTuLuanPoints = tuLuanQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
+                const totalPoints = totalTracNghiemPoints + totalTuLuanPoints;
+                const pointPerTracNghiem = tracNghiemQuestions.length > 0 ? (totalTracNghiemPoints / tracNghiemQuestions.length) : 0;
+                
+                const formatPoints = (p) => parseFloat(p.toFixed(2));
+
+                const keyHeaderHtml = `
+                         <table style="width:100%; border: none; font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.5;">
+                            <tr>
+                                <td style="text-align: center; width: 50%; vertical-align: top;">
+                                    <p style="margin:0; text-transform: uppercase;">${headerInfo.donVi}</p>
+                                    <table style="margin: 0 auto; border: none; border-collapse: collapse; text-align: center;">
+                                        <tr><td style="padding:0 5px; text-transform: uppercase; font-weight: bold;">${headerInfo.tenTruong}</td></tr>
+                                    </table>
+                                </td>
+                                <td style="text-align: center; width: 50%; vertical-align: top;">
+                                     <p style="margin:0; font-weight: bold; text-transform: uppercase;">HƯỚNG DẪN CHẤM MÔN ${headerInfo.monHoc.toUpperCase()}</p>
+                                     <p style="margin:0; font-style: italic;">(Hướng dẫn chấm gồm có 01 trang)</p>
+                                </td>
+                            </tr>
+                             <tr>
+                                <td style="text-align: center; padding-top: 10px;">
+                                    <p style="margin:0; font-weight: bold;">ĐỀ CHÍNH THỨC</p>
+                                </td>
+                                <td></td>
+                             </tr>
+                        </table>`;
+
+                let keyTableContent = '<table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-family: \'Times New Roman\', serif; font-size: 13pt; margin-top: 15pt;">';
+                keyTableContent += `
+                    <thead style="font-weight: bold; text-align: center;">
+                        <tr>
+                            <td style="border: 1px solid black; padding: 5px; width: 25%;">Phần</td>
+                            <td style="border: 1px solid black; padding: 5px;">Đáp án</td>
+                            <td style="border: 1px solid black; padding: 5px; width: 15%;">Điểm</td>
+                        </tr>
+                    </thead>
+                    <tbody>
+                `;
+
+                // Trắc nghiệm Row
+                if (tracNghiemQuestions.length > 0) {
+                    let answerGrid = '<table style="width: 100%; border-collapse: collapse; text-align: center; border-style: hidden;">';
+                    const cols = 7;
+                    const numAnswerRows = Math.ceil(tracNghiemQuestions.length / cols);
+
+                    for (let i = 0; i < numAnswerRows; i++) {
+                        answerGrid += '<tr>'; // Question number row
+                        for (let j = 0; j < cols; j++) {
+                            const num = i * cols + j + 1;
+                            answerGrid += `<td style="border: 1px solid black; padding: 4px; font-weight: bold;">${num <= tracNghiemQuestions.length ? num : '&nbsp;'}</td>`;
+                        }
+                        answerGrid += '</tr>';
+                        answerGrid += '<tr>'; // Answer letter row
+                        for (let j = 0; j < cols; j++) {
+                            const numIndex = i * cols + j;
+                            if (numIndex < tracNghiemQuestions.length) {
+                                const q = tracNghiemQuestions[numIndex];
+                                let answerText = '';
+                                if (q.luaChon && q.luaChon.length > 0) {
+                                    const correctIndex = (q.luaChon || []).findIndex(opt => opt.correct);
+                                    answerText = correctIndex !== -1 ? String.fromCharCode(65 + correctIndex) : '';
+                                } else {
+                                    answerText = q.dapAn || '-';
+                                }
+                                answerGrid += `<td style="border: 1px solid black; padding: 4px;">${answerText}</td>`;
+                            } else {
+                                answerGrid += `<td style="border: 1px solid black; padding: 4px;">&nbsp;</td>`;
+                            }
+                        }
+                        answerGrid += '</tr>';
                     }
-                });
-                return keyHtml + answers + '</div>';
+                    answerGrid += '</table>';
+                    
+                    keyTableContent += `
+                        <tr>
+                            <td style="border: 1px solid black; padding: 5px; vertical-align: top; text-align: center;">
+                                <strong>Trắc nghiệm: ${formatPoints(totalTracNghiemPoints)} điểm</strong><br>
+                                (mỗi câu trả lời đúng được ${formatPoints(pointPerTracNghiem)} đ)
+                            </td>
+                            <td style="border: 1px solid black; padding: 0;">${answerGrid}</td>
+                            <td style="border: 1px solid black; padding: 5px; vertical-align: top; text-align: center; font-weight: bold;">${formatPoints(totalTracNghiemPoints)}đ</td>
+                        </tr>
+                    `;
+                }
+                
+                // Tự luận Row
+                 if (tuLuanQuestions.length > 0) {
+                    keyTableContent += `
+                        <tr>
+                            <td style="border: 1px solid black; padding: 5px; vertical-align: top; text-align: center;">
+                                <strong>Tự luận: ${formatPoints(totalTuLuanPoints)} điểm</strong>
+                            </td>
+                            <td style="border: 1px solid black; padding: 5px;">
+                                ${tuLuanQuestions.map((q, index) => `
+                                    <div style="padding-bottom: 5px;">
+                                        <strong>Câu ${tracNghiemQuestions.length + index + 1}:</strong> 
+                                        <em>${q.dapAn || 'Học sinh trình bày hợp lí, chính xác...'}</em>
+                                    </div>
+                                `).join('')}
+                            </td>
+                            <td style="border: 1px solid black; padding: 5px; vertical-align: top; text-align: center; font-weight: bold;">
+                                 ${tuLuanQuestions.map(q => `<div>${formatPoints(q.points || 0)}đ</div>`).join('')}
+                            </td>
+                        </tr>
+                    `;
+                 }
+
+                // Tổng cộng Row
+                keyTableContent += `
+                    <tr>
+                        <td style="border: 1px solid black; padding: 5px; font-weight: bold; text-align: center;">
+                            Tổng số câu:<br> ${questions.length} câu <br>(TN + TL)
+                        </td>
+                        <td style="border: 1px solid black; padding: 5px;"></td>
+                        <td style="border: 1px solid black; padding: 5px; font-weight: bold; text-align: center;">${formatPoints(totalPoints)}đ</td>
+                    </tr>
+                `;
+
+
+                keyTableContent += '</tbody></table>';
+
+                const footerHtml = `
+                    <p style="text-align: center; font-weight: bold; margin-top: 10px;">---Hết---</p>
+                    <p style="font-style: italic; margin-top: 10px;">-Học sinh có thể trình bày theo cách khác, hợp lí, chính xác thì cho điểm tối đa.</p>
+                `;
+
+                let finalKeyHtml = `<div style="font-family: 'Times New Roman', serif; font-size: 13pt; margin: 0 auto; max-width: 800px;">
+                                    ${keyHeaderHtml}
+                                    ${keyTableContent}
+                                    ${footerHtml}
+                                   </div>`;
+                
+                return finalKeyHtml;
             },
 
             triggerDownload(htmlContent, filename) {
@@ -578,4 +776,18 @@
 </body>
 
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
