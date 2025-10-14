@@ -1883,251 +1883,152 @@ loadFileSystem();
                 });
             };
             
-            const distributeQuestions = () => {
-                const currentDir = getCurrentDirectory();
-                if (!currentDir || !currentDir.matrixData || currentDir.matrixData.matrix.rows.length === 0) {
-                    showToast("Không có chủ đề nào để phân bổ câu hỏi.");
-                    return;
-                }
+           // SAU DÒNG NÀY LÀ HÀM distributeQuestions ĐÃ ĐƯỢC CẢI THIỆN
 
-                const gradeName = currentDir.name;
-                
-                const subTopicPercentages = currentDir.matrixData.subTopicPercentages || {};
-                const totalSubTopicPercentage = Object.values(subTopicPercentages).reduce((sum, p) => sum + p, 0);
+            const distributeQuestions = () => {
+                const currentDir = getCurrentDirectory();
+                if (!currentDir || !currentDir.matrixData || currentDir.matrixData.matrix.rows.length === 0) {
+                    showToast("Không có chủ đề nào để phân bổ câu hỏi.");
+                    return;
+                }
 
-                if (totalSubTopicPercentage !== 100) {
-                    showToast(`Tổng tỷ lệ phần trăm phải bằng 100%, hiện tại là ${totalSubTopicPercentage}%. Vui lòng điều chỉnh trước khi phân bổ.`, true);
-                    return;
-                }
-                
-                const topicsWithoutFiles = currentDir.children.filter(topic => topic.children && topic.children.length === 0);
-                if (topicsWithoutFiles.length > 0) {
-                    const topicNames = topicsWithoutFiles.map(t => `'${t.name}'`).join(', ');
-                    showToast(`Chủ đề ${topicNames} chưa có câu hỏi. Vui lòng tải lên tệp JSON.`);
-                    return;
-                }
-                
-                const totalAvailable = currentDir.matrixData.availableCounts.reduce((acc, counts) => {
-                    acc.NB.TN += counts.NB.TN; acc.NB.TL += counts.NB.TL;
-                    acc.TH.TN += counts.TH.TN; acc.TH.TL += counts.TH.TL;
-                    acc.VD.TN += counts.VD.TN; acc.VD.TL += counts.VD.TL;
-                    acc.VDC.TN += counts.VDC.TN; acc.VDC.TL += counts.VDC.TL;
-                    return acc;
-                }, { NB: {TN: 0, TL: 0}, TH: {TN: 0, TL: 0}, VD: {TN: 0, TL: 0}, VDC: {TN: 0, TL: 0} });
-                
-                const totalTN_questions = 28;
-                const totalTL_questions = 3;
-                
-                const allRequirements = currentDir.matrixData.specifications.rows.map(row => getRequirementsHtml(gradeName, row[1], row[2]));
+                const gradeName = currentDir.name;
+                const subTopicPercentages = currentDir.matrixData.subTopicPercentages || {};
+                const totalSubTopicPercentage = Object.values(subTopicPercentages).reduce((sum, p) => sum + p, 0);
 
-                const hasVdcIndicator = allRequirements.some(req => req.includes("Vận dụng cao"));
-                const hasVdIndicator = allRequirements.some(req => req.includes("Vận dụng"));
-                
-                const totalNB_needed = 16;
-                const totalTH_needed = 12;
-                
-                let totalVD_needed = (hasVdIndicator && hasVdcIndicator) ? 2 : (hasVdIndicator ? 3 : 0);
-                let totalVDC_needed = (hasVdIndicator && hasVdcIndicator) ? 1 : (hasVdcIndicator ? 3 : 0);
+                if (totalSubTopicPercentage !== 100) {
+                    showToast(`Tổng tỷ lệ phần trăm phải bằng 100%, hiện tại là ${totalSubTopicPercentage}%. Vui lòng điều chỉnh trước khi phân bổ.`, true);
+                    return;
+                }
+                
+                // 1. TÍNH TỔNG SỐ LƯỢNG CÂU HỎI KHẢ DỤ VÀ XÁC ĐỊNH SỐ CÂU CẦN THIẾT
+                const totalAvailable = currentDir.matrixData.availableCounts.reduce((acc, counts) => {
+                    acc.NB.TN += counts.NB.TN; acc.NB.TL += counts.NB.TL;
+                    acc.TH.TN += counts.TH.TN; acc.TH.TL += counts.TH.TL;
+                    acc.VD.TN += counts.VD.TN; acc.VD.TL += counts.VD.TL;
+                    acc.VDC.TN += counts.VDC.TN; acc.VDC.TL += counts.VDC.TL;
+                    return acc;
+                }, { NB: {TN: 0, TL: 0}, TH: {TN: 0, TL: 0}, VD: {TN: 0, TL: 0}, VDC: {TN: 0, TL: 0} });
+                
+                const totalNB_needed = 16;
+                const totalTH_needed = 12;
+                
+                const allRequirements = currentDir.matrixData.specifications.rows.map(row => getRequirementsHtml(gradeName, row[1], row[2]));
 
-                let overallErrors = [];
-                if (totalAvailable.NB.TN < totalNB_needed) {
-                    overallErrors.push(`Số câu hỏi Nhận biết cần ${totalNB_needed} nhưng kho chỉ có ${totalAvailable.NB.TN}.`);
-                }
-                if (totalAvailable.TH.TN < totalTH_needed) {
-                     overallErrors.push(`Số câu hỏi Thông hiểu cần ${totalTH_needed} nhưng kho chỉ có ${totalAvailable.TH.TN}.`);
-                }
-                if (hasVdIndicator && totalAvailable.VD.TL < totalVD_needed) {
-                    overallErrors.push(`Số câu hỏi Vận dụng cần ${totalVD_needed} nhưng kho chỉ có ${totalAvailable.VD.TL}.`);
-                }
-                if (hasVdcIndicator && totalAvailable.VDC.TL < totalVDC_needed) {
-                    overallErrors.push(`Số câu hỏi Vận dụng cao cần ${totalVDC_needed} nhưng kho chỉ có ${totalAvailable.VDC.TL}.`);
-                }
-                if (overallErrors.length > 0) {
-                     showToast(overallErrors.join('<br/>'));
-                     return;
-                }
+                const hasVdcIndicator = allRequirements.some(req => req.includes("Vận dụng cao"));
+                const hasVdIndicator = allRequirements.some(req => req.includes("Vận dụng"));
+                
+                let totalVD_needed = 0; let totalVDC_needed = 0;
+                if (hasVdIndicator && hasVdcIndicator) { totalVD_needed = 2; totalVDC_needed = 1; }
+                else if (hasVdIndicator) { totalVD_needed = 3; totalVDC_needed = 0; }
+                else if (hasVdcIndicator) { totalVD_needed = 0; totalVDC_needed = 3; }
 
-                currentDir.matrixData.specifications.rows.forEach(row => {
-                    row[4] = '0-0'; // NB
-                    row[5] = '0-0'; // TH
-                    row[6] = '0-0'; // VD
-                    row[7] = '0-0'; // VDC
-                });
+                // Kiểm tra điều kiện có đủ câu trong kho hay không
+                let overallErrors = [];
+                if (totalAvailable.NB.TN < totalNB_needed) overallErrors.push(`Số câu hỏi **Nhận biết (TNKQ)** cần **${totalNB_needed}** nhưng kho chỉ có **${totalAvailable.NB.TN}**.`);
+                if (totalAvailable.TH.TN < totalTH_needed) overallErrors.push(`Số câu hỏi **Thông hiểu (TNKQ)** cần **${totalTH_needed}** nhưng kho chỉ có **${totalAvailable.TH.TN}**.`);
+                if (totalVD_needed > 0 && totalAvailable.VD.TL < totalVD_needed) overallErrors.push(`Số câu hỏi **Vận dụng (TL)** cần **${totalVD_needed}** nhưng kho chỉ có **${totalAvailable.VD.TL}**.`);
+                if (totalVDC_needed > 0 && totalAvailable.VDC.TL < totalVDC_needed) overallErrors.push(`Số câu hỏi **Vận dụng cao (TL)** cần **${totalVDC_needed}** nhưng kho chỉ có **${totalAvailable.VDC.TL}**.`);
+                if (overallErrors.length > 0) {
+                    showToast(overallErrors.join('<br/>'));
+                    return;
+                }
 
-                const subTopicsByPercent = Object.entries(subTopicPercentages).sort(([, a], [, b]) => b - a);
-                
-                // Distribute TL questions first
-                const tl_levels = [{level: 'VDC', needed: totalVDC_needed, specCol: 7}, {level: 'VD', needed: totalVD_needed, specCol: 6}];
-                let remainingTL = totalTL_questions;
+                // 2. KHỞI TẠO LẠI MA TRẬN VỀ 0
+                currentDir.matrixData.specifications.rows.forEach(row => {
+                    row[4] = '0-0'; // NB
+                    row[5] = '0-0'; // TH
+                    row[6] = '0-0'; // VD
+                    row[7] = '0-0'; // VDC
+                });
 
-                tl_levels.forEach(({level, needed, specCol}) => {
-                    if (needed === 0) return;
-                    let questions_to_distribute = needed;
-                    let candidates = subTopicsByPercent.filter(([subTopic]) => getRequirementsHtml(gradeName, currentDir.matrixData.specifications.rows.find(row => row[2] === subTopic)[1], subTopic).includes(level === 'VDC' ? "Vận dụng cao" : "Vận dụng"));
-                    
-                    const total_percent_of_candidates = candidates.reduce((sum, [, p]) => sum + p, 0);
+                const subTopicsByPercent = Object.entries(subTopicPercentages).sort(([, a], [, b]) => b - a);
+                
+                // 3. HÀM PHÂN BỔ CHUNG CHO TỪNG MỨC ĐỘ
+                const performDistribution = (level, needed, specCol, typeKey, reqKeyword) => {
+                    if (needed === 0) return;
+                    
+                    let questions_to_distribute = needed;
+                    
+                    // 3.1. Lọc ra các chủ đề đủ điều kiện (có yêu cầu cần đạt)
+                    let candidates = subTopicsByPercent.filter(([subTopic]) => {
+                        const specRow = currentDir.matrixData.specifications.rows.find(row => row[2] === subTopic);
+                        if (!specRow) return false;
+                        const requirements = getRequirementsHtml(gradeName, specRow[1], subTopic);
+                        return requirements.includes(reqKeyword);
+                    });
+                    
+                    const total_percent_of_candidates = candidates.reduce((sum, [, p]) => sum + p, 0);
+                    
+                    // 3.2. Phân bổ ban đầu (sử dụng Math.floor để tính phần nguyên, phần dư sẽ bù sau)
+                    candidates.forEach(([subTopic], index) => {
+                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
+                        const available = currentDir.matrixData.availableCounts[rowIndex][level][typeKey];
+                        
+                        let allocated = 0;
+                        if(total_percent_of_candidates > 0) {
+                            // SỬ DỤNG MATH.FLOOR ĐỂ CỐ Ý THIẾU CÂU, SAU ĐÓ BÙ TRỪ CHÍNH XÁC
+                            allocated = Math.floor((subTopicPercentages[subTopic] / total_percent_of_candidates) * needed);
+                        } else {
+                            allocated = Math.floor(needed / candidates.length);
+                        }
 
-                    candidates.forEach(([subTopic]) => {
-                        if (questions_to_distribute <= 0) return;
-                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
-                        const available = currentDir.matrixData.availableCounts[rowIndex][level].TL;
-                        
-                        let allocated = 0;
-                        if(total_percent_of_candidates > 0) {
-                            allocated = Math.round((subTopicPercentages[subTopic] / total_percent_of_candidates) * needed);
-                        } else {
-                            allocated = Math.floor(needed / candidates.length) + (candidates.findIndex(([s]) => s === subTopic) < (needed % candidates.length) ? 1 : 0);
-                        }
+                        // Giới hạn số câu được phân bổ bởi số câu có sẵn
+                        allocated = Math.min(allocated, available);
+                        
+                        let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][specCol] || '0-0').split('-').map(Number);
+                        
+                        if (typeKey === 'TN') { tn = allocated; } else { tl = allocated; }
+                        currentDir.matrixData.specifications.rows[rowIndex][specCol] = `${tn}-${tl}`;
+                        questions_to_distribute -= allocated;
+                    });
+                    
+                    // 3.3. BÙ TRỪ CHÍNH XÁC (Cộng/Trừ số câu còn thiếu/thừa)
+                    if (questions_to_distribute !== 0) {
+                        // Sắp xếp lại ứng viên theo thứ tự ưu tiên (phần trăm cao hơn)
+                        const adjustCandidates = candidates.filter(([subTopic]) => {
+                            const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
+                            const current_count = parseInt((currentDir.matrixData.specifications.rows[rowIndex][specCol] || '0-0').split('-')[typeKey === 'TN' ? 0 : 1]);
+                            // Chỉ xem xét những chủ đề còn khả năng tăng hoặc giảm
+                            return (questions_to_distribute > 0) ? (current_count < currentDir.matrixData.availableCounts[rowIndex][level][typeKey]) : (current_count > 0);
+                        }).sort(([, a], [, b]) => (questions_to_distribute > 0) ? b - a : a - b); // Ưu tiên: Bù cho % cao hơn, Trừ bù cho % thấp hơn
 
-                        allocated = Math.min(allocated, available, questions_to_distribute, remainingTL);
-                        
-                        let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][specCol] || '0-0').split('-').map(Number);
-                        currentDir.matrixData.specifications.rows[rowIndex][specCol] = `${tn}-${allocated}`;
-                        questions_to_distribute -= allocated;
-                        remainingTL -= allocated;
-                    });
-                });
-                
-                // Distribute TN questions
-                let remainingTN = totalTN_questions;
-                let allocated_tn_per_level = {
-                    NB: totalNB_needed,
-                    TH: totalTH_needed
-                };
-                
-                const tn_levels = [{level: 'NB', needed: allocated_tn_per_level.NB, specCol: 4}, {level: 'TH', needed: allocated_tn_per_level.TH, specCol: 5}];
-                
-                tn_levels.forEach(({level, needed, specCol}) => {
-                    if (needed === 0) return;
-                    let questions_to_distribute = needed;
-                    let candidates = subTopicsByPercent.filter(([subTopic]) => getRequirementsHtml(gradeName, currentDir.matrixData.specifications.rows.find(row => row[2] === subTopic)[1], subTopic).includes(level === 'NB' ? "Nhận biết" : "Thông hiểu"));
-                    
-                    const total_percent_of_candidates = candidates.reduce((sum, [, p]) => sum + p, 0);
+                        for (let i = 0; i < adjustCandidates.length && questions_to_distribute !== 0; i++) {
+                            const subTopic = adjustCandidates[i][0];
+                            const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
+                            let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][specCol] || '0-0').split('-').map(Number);
+                            
+                            if (questions_to_distribute > 0) { // Bù (thiếu câu)
+                                if (typeKey === 'TN') { tn++; } else { tl++; }
+                                questions_to_distribute--;
+                            } else { // Trừ bù (thừa câu)
+                                if (typeKey === 'TN') { tn--; } else { tl--; }
+                                questions_to_distribute++;
+                            }
+                            currentDir.matrixData.specifications.rows[rowIndex][specCol] = `${tn}-${tl}`;
+                        }
+                        // Cảnh báo nếu vẫn không đủ (do hết câu có sẵn)
+                        if (questions_to_distribute !== 0) {
+                            console.warn(`Cảnh báo: Không thể phân bổ đủ ${needed} câu hỏi ${level} (${typeKey}) do giới hạn câu hỏi có sẵn.`);
+                        }
+                    }
+                };
+                
+                // 4. THỰC HIỆN PHÂN BỔ (TL trước, TN sau)
+                performDistribution('VDC', totalVDC_needed, 7, 'TL', "Vận dụng cao");
+                performDistribution('VD', totalVD_needed, 6, 'TL', "Vận dụng");
+                performDistribution('NB', totalNB_needed, 4, 'TN', "Nhận biết");
+                performDistribution('TH', totalTH_needed, 5, 'TN', "Thông hiểu");
 
-                    candidates.forEach(([subTopic]) => {
-                        if (questions_to_distribute <= 0) return;
-                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
-                        const available = currentDir.matrixData.availableCounts[rowIndex][level].TN;
-                        
-                        let allocated = 0;
-                        if(total_percent_of_candidates > 0) {
-                            allocated = Math.round((subTopicPercentages[subTopic] / total_percent_of_candidates) * needed);
-                        } else {
-                            allocated = Math.floor(needed / candidates.length) + (candidates.findIndex(([s]) => s === subTopic) < (needed % candidates.length) ? 1 : 0);
-                        }
-
-                        allocated = Math.min(allocated, available, questions_to_distribute, remainingTN);
-                        
-                        let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][specCol] || '0-0').split('-').map(Number);
-                        currentDir.matrixData.specifications.rows[rowIndex][specCol] = `${allocated}-${tl}`;
-                        questions_to_distribute -= allocated;
-                        remainingTN -= allocated;
-                    });
-                });
-
-                // Final adjustment for rounding errors
-                let totalNB_allocated = currentDir.matrixData.specifications.rows.reduce((sum, row) => sum + parseInt((row[4]||'0-0').split('-')[0]), 0);
-                let totalTH_allocated = currentDir.matrixData.specifications.rows.reduce((sum, row) => sum + parseInt((row[5]||'0-0').split('-')[0]), 0);
-                let totalVD_allocated = currentDir.matrixData.specifications.rows.reduce((sum, row) => sum + parseInt((row[6]||'0-0').split('-')[1]), 0);
-                let totalVDC_allocated = currentDir.matrixData.specifications.rows.reduce((sum, row) => sum + parseInt((row[7]||'0-0').split('-')[1]), 0);
-                
-                let diff_NB = totalNB_needed - totalNB_allocated;
-                let diff_TH = totalTH_needed - totalTH_allocated;
-                let diff_VD = totalVD_needed - totalVD_allocated;
-                let diff_VDC = totalVDC_needed - totalVDC_allocated;
-                
-                if (diff_NB !== 0) {
-                    const sortedCandidates = subTopicsByPercent.filter(([subTopic]) => {
-                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
-                        const requirements = getRequirementsHtml(gradeName, currentDir.matrixData.specifications.rows[rowIndex][1], subTopic);
-                        const current_count = parseInt((currentDir.matrixData.specifications.rows[rowIndex][4] || '0-0').split('-')[0]);
-                        return requirements.includes("Nhận biết") && (diff_NB > 0 ? (current_count < currentDir.matrixData.availableCounts[rowIndex].NB.TN) : (current_count > 0));
-                    });
-                    
-                    sortedCandidates.forEach(([subTopic]) => {
-                        if (diff_NB === 0) return;
-                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
-                        let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][4] || '0-0').split('-').map(Number);
-                        if (diff_NB > 0) {
-                            tn++; diff_NB--;
-                        } else {
-                            tn--; diff_NB++;
-                        }
-                        currentDir.matrixData.specifications.rows[rowIndex][4] = `${tn}-${tl}`;
-                    });
-                }
-                
-                if (diff_TH !== 0) {
-                    const sortedCandidates = subTopicsByPercent.filter(([subTopic]) => {
-                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
-                        const requirements = getRequirementsHtml(gradeName, currentDir.matrixData.specifications.rows[rowIndex][1], subTopic);
-                        const current_count = parseInt((currentDir.matrixData.specifications.rows[rowIndex][5] || '0-0').split('-')[0]);
-                        return requirements.includes("Thông hiểu") && (diff_TH > 0 ? (current_count < currentDir.matrixData.availableCounts[rowIndex].TH.TN) : (current_count > 0));
-                    });
-                    
-                    sortedCandidates.forEach(([subTopic]) => {
-                        if (diff_TH === 0) return;
-                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
-                        let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][5] || '0-0').split('-').map(Number);
-                        if (diff_TH > 0) {
-                            tn++; diff_TH--;
-                        } else {
-                            tn--; diff_TH++;
-                        }
-                        currentDir.matrixData.specifications.rows[rowIndex][5] = `${tn}-${tl}`;
-                    });
-                }
-
-                if (diff_VD !== 0) {
-                    const sortedCandidates = subTopicsByPercent.filter(([subTopic]) => {
-                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
-                        const requirements = getRequirementsHtml(gradeName, currentDir.matrixData.specifications.rows[rowIndex][1], subTopic);
-                        const current_count = parseInt((currentDir.matrixData.specifications.rows[rowIndex][6] || '0-0').split('-')[1]);
-                        return requirements.includes("Vận dụng") && (diff_VD > 0 ? (current_count < currentDir.matrixData.availableCounts[rowIndex].VD.TL) : (current_count > 0));
-                    });
-                    
-                    sortedCandidates.forEach(([subTopic]) => {
-                        if (diff_VD === 0) return;
-                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
-                        let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][6] || '0-0').split('-').map(Number);
-                        if (diff_VD > 0) {
-                            tl++; diff_VD--;
-                        } else {
-                            tl--; diff_VD++;
-                        }
-                        currentDir.matrixData.specifications.rows[rowIndex][6] = `${tn}-${tl}`;
-                    });
-                }
-
-                if (diff_VDC !== 0) {
-                    const sortedCandidates = subTopicsByPercent.filter(([subTopic]) => {
-                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
-                        const requirements = getRequirementsHtml(gradeName, currentDir.matrixData.specifications.rows[rowIndex][1], subTopic);
-                        const current_count = parseInt((currentDir.matrixData.specifications.rows[rowIndex][7] || '0-0').split('-')[1]);
-                        return requirements.includes("Vận dụng cao") && (diff_VDC > 0 ? (current_count < currentDir.matrixData.availableCounts[rowIndex].VDC.TL) : (current_count > 0));
-                    });
-                    
-                    sortedCandidates.forEach(([subTopic]) => {
-                        if (diff_VDC === 0) return;
-                        const rowIndex = currentDir.matrixData.specifications.rows.findIndex(row => row[2] === subTopic);
-                        let [tn, tl] = (currentDir.matrixData.specifications.rows[rowIndex][7] || '0-0').split('-').map(Number);
-                        if (diff_VDC > 0) {
-                            tl++; diff_VDC--;
-                        } else {
-                            tl--; diff_VDC++;
-                        }
-                        currentDir.matrixData.specifications.rows[rowIndex][7] = `${tn}-${tl}`;
-                    });
-                }
-
-
-                currentDir.matrixData.specifications.rows.forEach((row, index) => {
-                    updateMatrixFromSpec(index, currentDir);
-                });
-                
-                showToast("Đã phân bổ câu hỏi thành công!", false);
-                renderMatrix(currentDir.matrixData, true);
-            };
+                // 5. CẬP NHẬT LẠI MA TRẬN CUỐI CÙNG
+                currentDir.matrixData.specifications.rows.forEach((row, index) => {
+                    updateMatrixFromSpec(index, currentDir);
+                });
+                
+                showToast("Đã phân bổ câu hỏi thành công!", false);
+                renderMatrix(currentDir.matrixData, true);
+                saveFileSystem();
+            };
 
             matrixContent.addEventListener('click', (e) => {
                 const cell = e.target.closest('.editable-cell');
