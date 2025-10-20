@@ -316,9 +316,14 @@
                     allData.forEach(data => {
                         if (!data) return;
                         const bai = data.thongTinChung?.tenBai || data.thongTinChung?.bai || 'Chung';
-                        const process = (qList) => qList.forEach(q => tempBank.push({ ...q, bai, uniqueId: Math.random() }));
-                        if (data.tracNghiem) process(data.tracNghiem);
-                        if (data.tuLuan) process(data.tuLuan);
+                        // Process multiple choice / objective questions
+                        if (data.tracNghiem) {
+                            data.tracNghiem.forEach(q => tempBank.push({ ...q, bai, uniqueId: Math.random() }));
+                        }
+                        // Process essay questions, ensuring their type is standardized to 'tu-luan'
+                        if (data.tuLuan) {
+                            data.tuLuan.forEach(q => tempBank.push({ ...q, loai: 'tu-luan', bai, uniqueId: Math.random() }));
+                        }
                     });
                     
                     const seenContent = new Set();
@@ -506,9 +511,9 @@
                         </tr>
                     </table>`;
 
-                // Phân loại câu hỏi: trắc nghiệm là câu có lựa chọn, tự luận là câu không có.
-                const tracNghiemQuestions = questions.filter(q => q.luaChon && q.luaChon.length > 0);
-                const tuLuanQuestions = questions.filter(q => !q.luaChon || q.luaChon.length === 0);
+                // Phân loại lại câu hỏi: chỉ câu có loại 'tu-luan' mới là tự luận.
+                const tracNghiemQuestions = questions.filter(q => q.loai !== 'tu-luan');
+                const tuLuanQuestions = questions.filter(q => q.loai === 'tu-luan');
                 const sortedQuestions = [...tracNghiemQuestions, ...tuLuanQuestions];
 
                 let tracNghiemHtml = '';
@@ -617,8 +622,8 @@
                 }
 
                 // Logic for 'test' type
-                const tracNghiemQuestions = questions.filter(q => q.luaChon && q.luaChon.length > 0);
-                const tuLuanQuestions = questions.filter(q => !q.luaChon || q.luaChon.length === 0);
+                const tracNghiemQuestions = questions.filter(q => q.loai !== 'tu-luan');
+                const tuLuanQuestions = questions.filter(q => q.loai === 'tu-luan');
 
                 const totalTracNghiemPoints = tracNghiemQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
                 const totalTuLuanPoints = tuLuanQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
@@ -773,5 +778,7 @@
 </body>
 
 </html>
+
+
 
 
