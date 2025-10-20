@@ -506,9 +506,10 @@
                         </tr>
                     </table>`;
 
-                // Phân loại lại câu hỏi: chỉ câu có loại 'tu-luan' mới là tự luận
-                const tuLuanQuestions = questions.filter(q => q.loai === 'tu-luan');
+                // Sắp xếp lại câu hỏi: trắc nghiệm trước, tự luận sau.
                 const tracNghiemQuestions = questions.filter(q => q.loai !== 'tu-luan');
+                const tuLuanQuestions = questions.filter(q => q.loai === 'tu-luan');
+                const sortedQuestions = [...tracNghiemQuestions, ...tuLuanQuestions];
 
                 let tracNghiemHtml = '';
                 if (tracNghiemQuestions.length > 0) {
@@ -595,7 +596,7 @@
                     `;
                 }
                 
-                const answerKeyHtml = this.generateAnswerKeyHtml(questions, 'test', headerInfo);
+                const answerKeyHtml = this.generateAnswerKeyHtml(sortedQuestions, 'test', headerInfo);
                 const finalHtml = `<div style="font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.5; margin: 0 auto; max-width: 800px; text-align: justify;">
                     ${headerHtml}
                     ${tracNghiemHtml}
@@ -620,8 +621,10 @@
                 }
 
                 // Logic for 'test' type
-                const tuLuanQuestions = questions.filter(q => q.loai === 'tu-luan');
-                const tracNghiemQuestions = questions.filter(q => q.loai !== 'tu-luan');
+                // Câu hỏi đã được sắp xếp trước khi chuyển vào hàm này
+                const firstTuLuanIndex = questions.findIndex(q => q.loai === 'tu-luan');
+                const tracNghiemQuestions = firstTuLuanIndex === -1 ? questions : questions.slice(0, firstTuLuanIndex);
+                const tuLuanQuestions = firstTuLuanIndex === -1 ? [] : questions.slice(firstTuLuanIndex);
 
                 const totalTracNghiemPoints = tracNghiemQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
                 const totalTuLuanPoints = tuLuanQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
@@ -776,3 +779,4 @@
 </body>
 
 </html>
+
