@@ -487,22 +487,22 @@
                             <td style="text-align: center; width: 50%; vertical-align: top;">
                                 <p style="margin:0; text-transform: uppercase;">${headerInfo.donVi}</p>
                                 <table style="margin: 0 auto; border: none; border-collapse: collapse; text-align: center;">
-                                    <tr><td style="padding:0 5px; text-transform: uppercase; font-weight: bold;">${headerInfo.tenTruong}</td></tr>
+                                    <tr><td style="padding:0 5px; text-transform: uppercase; font-weight: bold; border-top: 1px solid black; margin-top: 2px;">${headerInfo.tenTruong}</td></tr>
                                 </table>
                             </td>
                             <td style="text-align: center; width: 50%; vertical-align: top;">
-                                 <p style="margin:0; font-weight: bold; text-transform: uppercase;">${headerInfo.tenKyThi}</p>
-                                 <p style="margin:0;"><strong>Môn: ${headerInfo.monHoc}</strong></p>
-                                 <p style="margin:0;">Thời gian: ${headerInfo.thoiGian} <em>(không kể thời gian giao đề)</em></p>
-                                 <p style="margin:0; font-style: italic;">(Đề có 05 trang)</p>
+                                <p style="margin:0; font-weight: bold; text-transform: uppercase;">${headerInfo.tenKyThi}</p>
+                                <p style="margin:0;"><strong>Môn: ${headerInfo.monHoc}</strong></p>
+                                <p style="margin:0;">Thời gian: ${headerInfo.thoiGian} <em>(không kể thời gian giao đề)</em></p>
+                                <p style="margin:0; font-style: italic;">(Đề có 01 trang)</p>
                             </td>
                         </tr>
-                         <tr>
+                        <tr>
                             <td style="text-align: center; padding-top: 10px;">
                                 <p style="margin:0; font-weight: bold;">ĐỀ CHÍNH THỨC</p>
                             </td>
                             <td></td>
-                         </tr>
+                        </tr>
                     </table>
                     <table style="width: 100%; margin-top: 10pt; font-size: 13pt;">
                         <tr>
@@ -511,63 +511,62 @@
                         </tr>
                     </table>`;
 
-                // Phân loại lại câu hỏi: chỉ câu có loại 'tu-luan' mới là tự luận.
                 const tracNghiemQuestions = questions.filter(q => q.loai !== 'tu-luan');
                 const tuLuanQuestions = questions.filter(q => q.loai === 'tu-luan');
-                const sortedQuestions = [...tracNghiemQuestions, ...tuLuanQuestions];
-
+                
                 let tracNghiemHtml = '';
                 if (tracNghiemQuestions.length > 0) {
                     const tracNghiemTotalPoints = tracNghiemQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
                     
-                    const gridQuestionCount = 28;
-                    let answerGridHtml = '';
-
-                    answerGridHtml = `<p style="text-align: left; font-style: italic; margin-bottom: 0;">- Em hãy điền đáp án vào khung bên dưới cho câu trả lời đúng: (mỗi câu đúng 0,25 điểm)</p>
-                                      <p style="text-align: left; font-style: italic; margin-bottom: 0;">- Trong đề kiểm tra này sử dụng phần mềm MS Office 2016</p>
-                                      <table style="border-collapse: collapse; margin: 10pt 0;">`;
+                    let answerGridHtml = `
+                        <p style="font-size: 13pt; font-style: italic; margin-top:5pt; margin-bottom:0;">- Em hãy điền đáp án vào khung bên dưới cho câu trả lời đúng: (mỗi câu đúng 0,25 điểm)</p>
+                        <p style="font-size: 13pt; font-style: italic; margin-bottom:0;">- Trong đề kiểm tra này sử dụng phần mềm MS Office 2016</p>
+                        <table style="border-collapse: collapse; margin: 10pt auto;">`;
                     const cols = 14;
-                    const rows = 2; 
-                    for (let i = 0; i < rows; i++) {
-                        answerGridHtml += '<tr>';
-                        for(let j=0; j<cols; j++) { 
-                            const num = i * cols + j + 1; 
-                            answerGridHtml += `<td style="border: 1px solid black; text-align: center; font-weight: bold; padding: 4px;">Câu ${num}</td>`;
+                    const numTotalRows = Math.ceil(tracNghiemQuestions.length / cols);
+
+                    for (let i = 0; i < numTotalRows; i++) {
+                        answerGridHtml += '<tr>'; // Row for "Câu X"
+                        for (let j = 0; j < cols; j++) {
+                            const num = i * cols + j + 1;
+                            if (num <= tracNghiemQuestions.length) {
+                                answerGridHtml += `<td style="border: 1px solid black; text-align: center; font-weight: bold; padding: 4px;">Câu ${num}</td>`;
+                            }
                         }
-                        answerGridHtml += '</tr><tr>';
-                        for(let j=0; j<cols; j++) { 
-                            answerGridHtml += `<td style="border: 1px solid black; height: 20px;"></td>`;
+                        answerGridHtml += '</tr><tr>'; // Row for answer cells
+                        for (let j = 0; j < cols; j++) {
+                            const num = i * cols + j + 1;
+                            if (num <= tracNghiemQuestions.length) {
+                                answerGridHtml += `<td style="border: 1px solid black; height: 20px;"></td>`;
+                            }
                         }
                         answerGridHtml += '</tr>';
                     }
                     answerGridHtml += '</table>';
 
                     const questionContent = tracNghiemQuestions.map((q, index) => {
-                        let questionHtml = `<p style="margin-top: 6pt; margin-bottom: 0; font-size: 13pt;"><strong>Câu ${index + 1}.</strong> ${q.noiDung}</p>`;
+                        let questionHtml = `<p style="margin-top: 6pt; margin-bottom: 0; font-size: 13pt; text-align: justify;"><strong>Câu ${index + 1}.</strong> ${q.noiDung}</p>`;
                         if (q.luaChon && q.luaChon.length > 0) {
-                            
-                            const allOptionsAreShort = q.luaChon.every(opt => (opt.text || '').trim().split(/\s+/).length < 8);
-
+                            const allOptionsAreShort = q.luaChon.every(opt => (opt.text || '').trim().split(/\s+/).length < 10);
                             let optionsHtml = '';
                             if (allOptionsAreShort) {
-                                let tableContent = '<table style="width: 100%; border: none; border-collapse: collapse; table-layout: fixed;">';
+                                optionsHtml = '<table style="width: 100%; border: none; border-collapse: collapse; table-layout: fixed; margin-left: 1cm;">';
                                 for (let i = 0; i < q.luaChon.length; i += 2) {
                                     const opt1 = q.luaChon[i];
-                                    const opt2 = q.luaChon[i+1];
+                                    const opt2 = q.luaChon[i + 1];
                                     const prefix1 = `<strong>${String.fromCharCode(65 + i)}.</strong>`;
                                     const prefix2 = opt2 ? `<strong>${String.fromCharCode(65 + i + 1)}.</strong>` : '';
-                                    tableContent += `<tr>
+                                    optionsHtml += `<tr>
                                         <td style="width: 50%; vertical-align: top; padding: 2pt 5pt 2pt 0; font-size: 13pt;">${prefix1} ${opt1.text}</td>
                                         <td style="width: 50%; vertical-align: top; padding: 2pt 0 2pt 5pt; font-size: 13pt;">${opt2 ? `${prefix2} ${opt2.text}` : ''}</td>
                                     </tr>`;
                                 }
-                                tableContent += '</table>';
-                                optionsHtml = `<div style="margin-left: 0.25cm;">${tableContent}</div>`;
+                                optionsHtml += '</table>';
                             } else {
-                                optionsHtml = q.luaChon.map((opt, i) => {
+                                optionsHtml = '<div style="margin-left: 1cm;">' + q.luaChon.map((opt, i) => {
                                     const prefix = `<strong>${String.fromCharCode(65 + i)}.</strong>`;
-                                    return `<div style="margin-left: 20px; padding: 2px 0; font-size: 13pt;">${prefix} ${opt.text}</div>`;
-                                }).join('');
+                                    return `<p style="padding: 2px 0; font-size: 13pt; margin:0; text-align: justify;">${prefix} ${opt.text}</p>`;
+                                }).join('') + '</div>';
                             }
                             questionHtml += optionsHtml;
                         }
@@ -575,7 +574,7 @@
                     }).join('');
                     
                     tracNghiemHtml = `
-                        <h3 style="text-align:left; font-weight:bold;">Phần 1. Trắc nghiệm (${tracNghiemTotalPoints.toFixed(1)} điểm)</h3>
+                        <h3 style="font-size: 13.5pt; text-align:left; font-weight:bold;">Phần 1. Trắc nghiệm (${tracNghiemTotalPoints.toFixed(1)} điểm)</h3>
                         ${answerGridHtml}
                         ${questionContent}
                     `;
@@ -585,20 +584,20 @@
                 if (tuLuanQuestions.length > 0) {
                     const tuLuanTotalPoints = tuLuanQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
                     const questionContent = tuLuanQuestions.map((q, index) => {
-                          let questionHtml = `<p style="margin-top: 6pt; margin-bottom: 0; font-size: 13pt;"><strong>Câu ${index + tracNghiemQuestions.length + 1} (${(q.points || 0).toFixed(2)} điểm):</strong> ${q.noiDung}</p>`;
-                          const dottedLine = '<p style="font-size: 13pt; margin-top: 6pt; margin-bottom: 0;">.....................................................................................................................................</p>';
-                          questionHtml += dottedLine.repeat(5);
-                          return questionHtml;
+                        let questionHtml = `<p style="margin-top: 6pt; margin-bottom: 0; font-size: 13pt;"><strong>Câu ${index + tracNghiemQuestions.length + 1} (${(q.points || 0).toFixed(2)} điểm):</strong> ${q.noiDung}</p>`;
+                        const dottedLine = '<p style="font-size: 13pt; margin-top: 6pt; margin-bottom: 0;">.....................................................................................................................................</p>';
+                        questionHtml += dottedLine.repeat(5);
+                        return questionHtml;
                     }).join('');
 
                     tuLuanHtml = `
-                        <h3 style="text-align:left; font-weight:bold; margin-top: 15pt;">Phần 2. Tự luận (${tuLuanTotalPoints.toFixed(1)} điểm)</h3>
+                        <h3 style="font-size: 13.5pt; text-align:left; font-weight:bold; margin-top: 15pt;">Phần 2. Tự luận (${tuLuanTotalPoints.toFixed(1)} điểm)</h3>
                         ${questionContent}
                     `;
                 }
                 
-                const answerKeyHtml = this.generateAnswerKeyHtml(sortedQuestions, 'test', headerInfo);
-                const finalHtml = `<div style="font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.5; margin: 0 auto; max-width: 800px; text-align: justify;">
+                const answerKeyHtml = this.generateAnswerKeyHtml(questions, 'test', headerInfo);
+                const finalHtml = `<div style="font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.5; margin: 0 auto; max-width: 16cm; text-align: justify;">
                     ${headerHtml}
                     ${tracNghiemHtml}
                     ${tuLuanHtml}
@@ -633,26 +632,27 @@
                 const formatPoints = (p) => parseFloat(p.toFixed(2));
 
                 const keyHeaderHtml = `
-                           <table style="width:100%; border: none; font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.5;">
-                               <tr>
-                                   <td style="text-align: center; width: 50%; vertical-align: top;">
-                                       <p style="margin:0; text-transform: uppercase;">${headerInfo.donVi}</p>
-                                       <table style="margin: 0 auto; border: none; border-collapse: collapse; text-align: center;">
-                                           <tr><td style="padding:0 5px; text-transform: uppercase; font-weight: bold;">${headerInfo.tenTruong}</td></tr>
-                                       </table>
-                                   </td>
-                                   <td style="text-align: center; width: 50%; vertical-align: top;">
-                                       <p style="margin:0; font-weight: bold; text-transform: uppercase;">HƯỚNG DẪN CHẤM MÔN ${headerInfo.monHoc.toUpperCase()}</p>
-                                       <p style="margin:0; font-style: italic;">(Hướng dẫn chấm gồm có 01 trang)</p>
-                                   </td>
-                               </tr>
-                                <tr>
-                                   <td style="text-align: center; padding-top: 10px;">
-                                       <p style="margin:0; font-weight: bold;">ĐỀ CHÍNH THỨC</p>
-                                   </td>
-                                   <td></td>
-                                </tr>
-                           </table>`;
+                    <table style="width:100%; border: none; font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.5;">
+                        <tr>
+                            <td style="text-align: center; width: 50%; vertical-align: top;">
+                                <p style="margin:0; text-transform: uppercase;">${headerInfo.donVi}</p>
+                                <table style="margin: 0 auto; border: none; border-collapse: collapse; text-align: center;">
+                                     <tr><td style="padding:0 5px; text-transform: uppercase; font-weight: bold; border-top: 1px solid black; margin-top: 2px;">${headerInfo.tenTruong}</td></tr>
+                                </table>
+                            </td>
+                            <td style="text-align: center; width: 50%; vertical-align: top;">
+                                <p style="margin:0; font-weight: bold; text-transform: uppercase;">HƯỚNG DẪN CHẤM ${headerInfo.tenKyThi}</p>
+                                <p style="margin:0; font-weight: bold; text-transform: uppercase;">MÔN ${headerInfo.monHoc.toUpperCase()}</p>
+                                <p style="margin:0; font-style: italic;">(Hướng dẫn chấm gồm có 01 trang)</p>
+                            </td>
+                        </tr>
+                         <tr>
+                            <td style="text-align: center; padding-top: 10px;">
+                                <p style="margin:0; font-weight: bold;">ĐỀ CHÍNH THỨC</p>
+                            </td>
+                            <td></td>
+                        </tr>
+                    </table>`;
 
                 let keyTableContent = '<table style="width: 100%; border-collapse: collapse; border: 1px solid black; font-family: \'Times New Roman\', serif; font-size: 13pt; margin-top: 15pt;">';
                 keyTableContent += `
@@ -663,23 +663,24 @@
                             <td style="border: 1px solid black; padding: 5px; width: 15%;">Điểm</td>
                         </tr>
                     </thead>
-                    <tbody>
-                `;
+                    <tbody>`;
 
-                // Trắc nghiệm Row
                 if (tracNghiemQuestions.length > 0) {
                     let answerGrid = '<table style="width: 100%; border-collapse: collapse; text-align: center; border-style: hidden;">';
                     const cols = 7;
                     const numAnswerRows = Math.ceil(tracNghiemQuestions.length / cols);
 
                     for (let i = 0; i < numAnswerRows; i++) {
-                        answerGrid += '<tr>'; // Question number row
+                        answerGrid += '<tr>';
                         for (let j = 0; j < cols; j++) {
                             const num = i * cols + j + 1;
-                            answerGrid += `<td style="border: 1px solid black; padding: 4px; font-weight: bold;">${num <= tracNghiemQuestions.length ? num : '&nbsp;'}</td>`;
+                            if (num <= tracNghiemQuestions.length) {
+                                answerGrid += `<td style="border: 1px solid black; padding: 4px; font-weight: bold;">${num}</td>`;
+                            } else {
+                                 answerGrid += `<td style="border: 1px solid black; padding: 4px; border-color: transparent;">&nbsp;</td>`;
+                            }
                         }
-                        answerGrid += '</tr>';
-                        answerGrid += '<tr>'; // Answer letter row
+                        answerGrid += '</tr><tr>';
                         for (let j = 0; j < cols; j++) {
                             const numIndex = i * cols + j;
                             if (numIndex < tracNghiemQuestions.length) {
@@ -693,7 +694,7 @@
                                 }
                                 answerGrid += `<td style="border: 1px solid black; padding: 4px;">${answerText}</td>`;
                             } else {
-                                answerGrid += `<td style="border: 1px solid black; padding: 4px;">&nbsp;</td>`;
+                                answerGrid += `<td style="border: 1px solid black; padding: 4px; border-color: transparent;">&nbsp;</td>`;
                             }
                         }
                         answerGrid += '</tr>';
@@ -708,33 +709,29 @@
                             </td>
                             <td style="border: 1px solid black; padding: 0;">${answerGrid}</td>
                             <td style="border: 1px solid black; padding: 5px; vertical-align: top; text-align: center; font-weight: bold;">${formatPoints(totalTracNghiemPoints)}đ</td>
-                        </tr>
-                    `;
+                        </tr>`;
                 }
                 
-                // Tự luận Row
-                 if (tuLuanQuestions.length > 0) {
-                     keyTableContent += `
-                         <tr>
-                             <td style="border: 1px solid black; padding: 5px; vertical-align: top; text-align: center;">
-                                 <strong>Tự luận: ${formatPoints(totalTuLuanPoints)} điểm</strong>
-                             </td>
-                             <td style="border: 1px solid black; padding: 5px;">
-                                 ${tuLuanQuestions.map((q, index) => `
-                                     <div style="padding-bottom: 5px;">
-                                         <strong>Câu ${tracNghiemQuestions.length + index + 1}:</strong> 
-                                         <em>${q.dapAn || 'Học sinh trình bày hợp lí, chính xác...'}</em>
-                                     </div>
-                                 `).join('')}
-                             </td>
-                             <td style="border: 1px solid black; padding: 5px; vertical-align: top; text-align: center; font-weight: bold;">
-                                 ${tuLuanQuestions.map(q => `<div>${formatPoints(q.points || 0)}đ</div>`).join('')}
-                             </td>
-                         </tr>
-                     `;
-                 }
+                if (tuLuanQuestions.length > 0) {
+                    keyTableContent += `
+                        <tr>
+                            <td style="border: 1px solid black; padding: 5px; vertical-align: top; text-align: center;">
+                                <strong>Tự luận: ${formatPoints(totalTuLuanPoints)} điểm</strong>
+                            </td>
+                            <td style="border: 1px solid black; padding: 5px; vertical-align: top;">
+                                ${tuLuanQuestions.map((q, index) => `
+                                    <div style="padding-bottom: 5px;">
+                                        <strong>Câu ${tracNghiemQuestions.length + index + 1}:</strong> 
+                                        <em>${q.dapAn || 'Học sinh trình bày hợp lí, chính xác...'}</em>
+                                    </div>
+                                `).join('')}
+                            </td>
+                            <td style="border: 1px solid black; padding: 5px; vertical-align: top; text-align: center; font-weight: bold;">
+                                ${tuLuanQuestions.map(q => `<div>${formatPoints(q.points || 0)}đ</div>`).join('')}
+                            </td>
+                        </tr>`;
+                }
 
-                // Tổng cộng Row
                 keyTableContent += `
                     <tr>
                         <td style="border: 1px solid black; padding: 5px; font-weight: bold; text-align: center;">
@@ -742,9 +739,7 @@
                         </td>
                         <td style="border: 1px solid black; padding: 5px;"></td>
                         <td style="border: 1px solid black; padding: 5px; font-weight: bold; text-align: center;">${formatPoints(totalPoints)}đ</td>
-                    </tr>
-                `;
-
+                    </tr>`;
 
                 keyTableContent += '</tbody></table>';
 
@@ -753,13 +748,11 @@
                     <p style="font-style: italic; margin-top: 10px;">-Học sinh có thể trình bày theo cách khác, hợp lí, chính xác thì cho điểm tối đa.</p>
                 `;
 
-                let finalKeyHtml = `<div style="font-family: 'Times New Roman', serif; font-size: 13pt; margin: 0 auto; max-width: 800px;">
-                                        ${keyHeaderHtml}
-                                        ${keyTableContent}
-                                        ${footerHtml}
-                                       </div>`;
-                
-                return finalKeyHtml;
+                return `<div style="font-family: 'Times New Roman', serif; font-size: 13pt; margin: 0 auto; max-width: 16cm;">
+                            ${keyHeaderHtml}
+                            ${keyTableContent}
+                            ${footerHtml}
+                        </div>`;
             },
 
             triggerDownload(htmlContent, filename) {
@@ -776,9 +769,4 @@
         TestGeneratorApp.init();
     </script>
 </body>
-
 </html>
-
-
-
-
