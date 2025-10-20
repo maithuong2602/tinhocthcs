@@ -506,16 +506,15 @@
                         </tr>
                     </table>`;
 
-                // Sắp xếp lại câu hỏi: trắc nghiệm trước, tự luận sau.
-                const tracNghiemQuestions = questions.filter(q => q.loai !== 'tu-luan');
-                const tuLuanQuestions = questions.filter(q => q.loai === 'tu-luan');
+                // Phân loại câu hỏi: trắc nghiệm là câu có lựa chọn, tự luận là câu không có.
+                const tracNghiemQuestions = questions.filter(q => q.luaChon && q.luaChon.length > 0);
+                const tuLuanQuestions = questions.filter(q => !q.luaChon || q.luaChon.length === 0);
                 const sortedQuestions = [...tracNghiemQuestions, ...tuLuanQuestions];
 
                 let tracNghiemHtml = '';
                 if (tracNghiemQuestions.length > 0) {
                     const tracNghiemTotalPoints = tracNghiemQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
                     
-                    // Bảng điền đáp án luôn hiển thị đúng 28 câu
                     const gridQuestionCount = 28;
                     let answerGridHtml = '';
 
@@ -523,7 +522,7 @@
                                       <p style="text-align: left; font-style: italic; margin-bottom: 0;">- Trong đề kiểm tra này sử dụng phần mềm MS Office 2016</p>
                                       <table style="border-collapse: collapse; margin: 10pt 0;">`;
                     const cols = 14;
-                    const rows = 2; // Luôn là 2 hàng cho 28 câu
+                    const rows = 2; 
                     for (let i = 0; i < rows; i++) {
                         answerGridHtml += '<tr>';
                         for(let j=0; j<cols; j++) { 
@@ -542,12 +541,10 @@
                         let questionHtml = `<p style="margin-top: 6pt; margin-bottom: 0; font-size: 13pt;"><strong>Câu ${index + 1}.</strong> ${q.noiDung}</p>`;
                         if (q.luaChon && q.luaChon.length > 0) {
                             
-                            // Check if all options are short (less than 8 words)
                             const allOptionsAreShort = q.luaChon.every(opt => (opt.text || '').trim().split(/\s+/).length < 8);
 
                             let optionsHtml = '';
                             if (allOptionsAreShort) {
-                                // Nếu tất cả các tùy chọn đều ngắn, sử dụng bố cục bảng hai cột bên trong một div có lề
                                 let tableContent = '<table style="width: 100%; border: none; border-collapse: collapse; table-layout: fixed;">';
                                 for (let i = 0; i < q.luaChon.length; i += 2) {
                                     const opt1 = q.luaChon[i];
@@ -562,7 +559,6 @@
                                 tableContent += '</table>';
                                 optionsHtml = `<div style="margin-left: 0.25cm;">${tableContent}</div>`;
                             } else {
-                                // Ngược lại, hiển thị tất cả các tùy chọn trong một cột
                                 optionsHtml = q.luaChon.map((opt, i) => {
                                     const prefix = `<strong>${String.fromCharCode(65 + i)}.</strong>`;
                                     return `<div style="margin-left: 20px; padding: 2px 0; font-size: 13pt;">${prefix} ${opt.text}</div>`;
@@ -574,7 +570,7 @@
                     }).join('');
                     
                     tracNghiemHtml = `
-                        <h3 style="text-align:left; font-weight:bold;">Phần 1. Trắc nghiệm (${tracNghiemTotalPoints.toFixed(2)} điểm)</h3>
+                        <h3 style="text-align:left; font-weight:bold;">Phần 1. Trắc nghiệm (${tracNghiemTotalPoints.toFixed(1)} điểm)</h3>
                         ${answerGridHtml}
                         ${questionContent}
                     `;
@@ -591,7 +587,7 @@
                     }).join('');
 
                     tuLuanHtml = `
-                        <h3 style="text-align:left; font-weight:bold; margin-top: 15pt;">Phần 2. TỰ LUẬN (${tuLuanTotalPoints.toFixed(2)} điểm)</h3>
+                        <h3 style="text-align:left; font-weight:bold; margin-top: 15pt;">Phần 2. Tự luận (${tuLuanTotalPoints.toFixed(1)} điểm)</h3>
                         ${questionContent}
                     `;
                 }
@@ -621,10 +617,8 @@
                 }
 
                 // Logic for 'test' type
-                // Câu hỏi đã được sắp xếp trước khi chuyển vào hàm này
-                const firstTuLuanIndex = questions.findIndex(q => q.loai === 'tu-luan');
-                const tracNghiemQuestions = firstTuLuanIndex === -1 ? questions : questions.slice(0, firstTuLuanIndex);
-                const tuLuanQuestions = firstTuLuanIndex === -1 ? [] : questions.slice(firstTuLuanIndex);
+                const tracNghiemQuestions = questions.filter(q => q.luaChon && q.luaChon.length > 0);
+                const tuLuanQuestions = questions.filter(q => !q.luaChon || q.luaChon.length === 0);
 
                 const totalTracNghiemPoints = tracNghiemQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
                 const totalTuLuanPoints = tuLuanQuestions.reduce((sum, q) => sum + (q.points || 0), 0);
@@ -779,4 +773,5 @@
 </body>
 
 </html>
+
 
