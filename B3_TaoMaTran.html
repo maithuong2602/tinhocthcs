@@ -1471,7 +1471,7 @@ loadFileSystem();
 				saveFileSystem(); // <-- THÊM DÒNG NÀY VÀO CUỐI
             });
 
-            const generatePrintHTML = (data) => {
+           const generatePrintHTML = (data) => {
                 const currentDir = getCurrentDirectory();
                 const examName = currentDir.name.toUpperCase().replace(' - ', ' - ');
                 const matrixTitle = `KHUNG MA TRẬN ĐỀ KIỂM TRA ${examName.replace('LỚP', 'MÔN TIN LỚP')}`;
@@ -1479,22 +1479,73 @@ loadFileSystem();
                 const pointsTNKQ = 0.25;
                 const pointsTL = 1;
 
+                // --- CSS ĐÃ ĐƯỢC CẬP NHẬT ---
                 const css = `
                     <style>
-                        @page { size: A4 landscape; margin: 1.5cm; }
-                        body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; }
-                        table { width: 100%; border-collapse: collapse; table-layout: auto; }
-                        caption { font-size: 14pt; font-weight: bold; margin-bottom: 1rem; text-align: center; }
-                        th, td { border: 1px solid black; padding: 4px; text-align: center; vertical-align: middle; }
+                        @page {
+                            size: A4 landscape;
+                            margin: 1.2cm; /* Giảm lề trang */
+                        }
+                        body {
+                            font-family: 'Times New Roman', Times, serif;
+                            font-size: 11pt;
+                            -webkit-print-color-adjust: exact; /* Đảm bảo màu nền được in (nếu có) */
+                             print-color-adjust: exact;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            table-layout: auto; /* Giữ auto cho ma trận trang 1 */
+                        }
+                        caption {
+                            font-size: 14pt;
+                            font-weight: bold;
+                            margin-bottom: 0.8rem; /* Giảm khoảng cách caption */
+                            text-align: center;
+                        }
+                        th, td {
+                            border: 1px solid black;
+                            padding: 3px; /* Giảm padding chung */
+                            text-align: center;
+                            vertical-align: middle;
+                            word-wrap: break-word; /* Cho phép tự xuống dòng nếu chữ quá dài */
+                        }
                         th { font-weight: bold; }
                         .text-left { text-align: left; }
-                        .page-break { page-break-after: always; }
-                        .muc-do-danh-gia { text-align: left; font-size: 10pt; }
                         tfoot td { font-weight: bold; }
+
+                        /* Trang 1: Khung Ma Trận */
+                        .page-one-matrix {
+                            page-break-after: always;
+                            width: 100%;
+                        }
+                        .page-one-matrix table { /* CSS riêng cho bảng ma trận */
+                             font-size: 10.5pt; /* Có thể giảm nhẹ font nếu cần */
+                        }
+                         .page-one-matrix th, .page-one-matrix td {
+                             padding: 4px; /* Giữ padding gốc hoặc điều chỉnh nếu cần */
+                         }
+
+
+                        /* Trang 2: Bảng Đặc Tả */
+                        .page-two-spec {
+                            width: 100%;
+                        }
+                        .page-two-spec table {
+                            table-layout: fixed; /* Chuyển sang fixed để kiểm soát width tốt hơn */
+                            font-size: 9.5pt; /* Giảm font-size chung cho bảng này */
+                        }
+                        .page-two-spec th, .page-two-spec td {
+                            padding: 2px; /* Giảm padding thêm nữa */
+                        }
+                        .muc-do-danh-gia {
+                            text-align: left;
+                            font-size: 8.5pt; /* Giảm font-size cột này thêm */
+                        }
                     </style>
                 `;
 
-                // --- PAGE 1: KHUNG MA TRẬN ---
+                // --- PAGE 1: KHUNG MA TRẬN (Giữ nguyên cấu trúc HTML, chỉ áp dụng CSS mới) ---
                 const totalTestPoints = data.matrix.rows.reduce((total, row) => {
                     const tnkq_count = (parseInt(row[3]||0) + parseInt(row[5]||0) + parseInt(row[7]||0) + parseInt(row[9]||0));
                     const tl_count = (parseInt(row[4]||0) + parseInt(row[6]||0) + parseInt(row[8]||0) + parseInt(row[10]||0));
@@ -1510,7 +1561,7 @@ loadFileSystem();
 
                 const actualPercentages = data.subTopicPercentages || {};
 
-                let matrixBodyHtml = '<tbody>';
+                let matrixBodyHtml = ''; // Sẽ được tạo trong vòng lặp dưới
                 Object.keys(groupedByMainTopic).forEach(mainTopic => {
                     const rows = groupedByMainTopic[mainTopic];
                     const rowspan = rows.length;
@@ -1542,18 +1593,16 @@ loadFileSystem();
                         matrixBodyHtml += '</tr>';
                     });
                 });
-                matrixBodyHtml += '</tbody>';
 
-                // Matrix Footer Calculations
                 const totals = { cau: Array(11).fill(0), diem: Array(11).fill(0) };
-                data.matrix.rows.forEach(row => {
-                    for (let i = 3; i <= 10; i++) {
-                        const cau = parseInt(row[i], 10) || 0;
-                        const isTNKQ = i % 2 !== 0;
-                        totals.cau[i] += cau;
-                        totals.diem[i] += cau * (isTNKQ ? pointsTNKQ : pointsTL);
-                    }
-                });
+                 data.matrix.rows.forEach(row => {
+                     for (let i = 3; i <= 10; i++) {
+                         const cau = parseInt(row[i], 10) || 0;
+                         const isTNKQ = i % 2 !== 0;
+                         totals.cau[i] += cau;
+                         totals.diem[i] += cau * (isTNKQ ? pointsTNKQ : pointsTL);
+                     }
+                 });
                 const nb_diem = totals.diem[3] + totals.diem[4];
                 const th_diem = totals.diem[5] + totals.diem[6];
                 const vd_diem = totals.diem[7] + totals.diem[8];
@@ -1564,7 +1613,6 @@ loadFileSystem();
                 const th_percent = totalPoints > 0 ? (th_diem / totalPoints * 100) : 0;
                 const vd_percent = totalPoints > 0 ? (vd_diem / totalPoints * 100) : 0;
                 const vdc_percent = totalPoints > 0 ? (vdc_diem / totalPoints * 100) : 0;
-                
                 const nb_th_percent = nb_percent + th_percent;
                 const vd_vdc_percent = vd_percent + vdc_percent;
 
@@ -1595,7 +1643,7 @@ loadFileSystem();
                     </tfoot>`;
 
                 let matrixTableHtml = `
-                    <div class="page-break">
+                    <div class="page-one-matrix">
                         <table>
                             <caption>${matrixTitle}</caption>
                             <thead>
@@ -1633,7 +1681,7 @@ loadFileSystem();
                     const chuDe = row[1]; acc[chuDe] = (acc[chuDe] || 0) + 1; return acc;
                 }, {});
 
-                let specBodyHtml = '<tbody>';
+                let specBodyHtml = ''; // Sẽ được tạo trong vòng lặp dưới
                 let lastSpecChuDe = null;
                 data.specifications.rows.forEach(row => {
                     const [stt, chuDe, noiDung, mucDo, nb_raw, th_raw, vd_raw, vdc_raw] = row;
@@ -1649,15 +1697,16 @@ loadFileSystem();
                         lastSpecChuDe = chuDe;
                     }
                     specBodyHtml += `<td class="text-left">${noiDung}</td>`;
-                    specBodyHtml += `<td class="muc-do-danh-gia">${mucDo}</td>`;
+                    // Thay thế thẻ <strong> bằng <span> để tránh in đậm không cần thiết và dễ kiểm soát CSS hơn
+                    const formattedMucDo = mucDo.replace(/<strong class="block font-semibold.*?"/g, '<span style="font-weight: bold; display: block; margin-top: 4px;"').replace(/<\/strong>/g, '</span>');
+                    specBodyHtml += `<td class="muc-do-danh-gia">${formattedMucDo}</td>`; // Áp dụng nội dung đã format
                     specBodyHtml += `<td>${nb_cau > 0 ? `${nb_cau}(TN)` : ''}</td>`;
                     specBodyHtml += `<td>${th_cau > 0 ? `${th_cau}(TN)` : ''}</td>`;
                     specBodyHtml += `<td>${vd_cau > 0 ? `${vd_cau}(TL)` : ''}</td>`;
                     specBodyHtml += `<td>${vdc_cau > 0 ? `${vdc_cau}(TL)` : ''}</td>`;
                     specBodyHtml += '</tr>';
                 });
-                specBodyHtml += '</tbody>';
-                
+
                 let totalNB_spec=0, totalTH_spec=0, totalVD_spec=0, totalVDC_spec=0;
                 data.specifications.rows.forEach(r => {
                     totalNB_spec += parseInt((r[4] || '0-0').split('-')[0],10)||0;
@@ -1692,22 +1741,27 @@ loadFileSystem();
                         </tr>
                     </tfoot>`;
 
+                // --- THAY ĐỔI: Thêm class .page-two-spec và điều chỉnh width cột ---
                 let specTableHtml = `
-                    <table>
-                        <caption>${specTitle}</caption>
-                        <thead>
-                            <tr>
-                                <th rowspan="2" style="width: 3%;">TT</th><th rowspan="2" style="width: 15%;">Chương/Chủ đề</th>
-                                <th rowspan="2" style="width: 17%;">Nội dung/Đơn vị kiến thức</th><th rowspan="2">Mức độ đánh giá</th>
-                                <th colspan="4" style="width: 20%;">Số câu hỏi theo mức độ nhận thức</th>
-                            </tr>
-                            <tr>
-                                <th>Nhận biết</th><th>Thông hiểu</th><th>Vận dụng</th><th>Vận dụng cao</th>
-                            </tr>
-                        </thead>
-                        <tbody>${specBodyHtml}</tbody>
-                        ${specFooterHtml}
-                    </table>`;
+                    <div class="page-two-spec">
+                        <table>
+                            <colgroup>
+                                <col style="width: 3%;">  <col style="width: 15%;"> <col style="width: 20%;"> <col style="width: 42%;"> <col style="width: 5%;">  <col style="width: 5%;">  <col style="width: 5%;">  <col style="width: 5%;">  </colgroup>
+                            <caption>${specTitle}</caption>
+                            <thead>
+                                <tr>
+                                    <th rowspan="2">TT</th><th rowspan="2">Chương/Chủ đề</th>
+                                    <th rowspan="2">Nội dung/Đơn vị kiến thức</th><th rowspan="2">Mức độ đánh giá</th>
+                                    <th colspan="4">Số câu hỏi theo mức độ nhận thức</th>
+                                </tr>
+                                <tr>
+                                    <th>Nhận biết</th><th>Thông hiểu</th><th>Vận dụng</th><th>Vận dụng cao</th>
+                                </tr>
+                            </thead>
+                            <tbody>${specBodyHtml}</tbody>
+                            ${specFooterHtml}
+                        </table>
+                    </div>`;
 
                 return `
                     <!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><title> </title>${css}</head>
