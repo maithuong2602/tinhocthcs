@@ -1559,25 +1559,26 @@ loadFileSystem();
                     return acc;
                 }, {});
 
-                const actualPercentages = data.subTopicPercentages || {};
+				let matrixBodyHtml = ''; // Sẽ được tạo trong vòng lặp dưới
+                Object.keys(groupedByMainTopic).forEach(mainTopic => {
+                    const rows = groupedByMainTopic[mainTopic];
+                    const rowspan = rows.length;
 
-                let matrixBodyHtml = ''; // Sẽ được tạo trong vòng lặp dưới
-                Object.keys(groupedByMainTopic).forEach(mainTopic => {
-                    const rows = groupedByMainTopic[mainTopic];
-                    const rowspan = rows.length;
-                    const mainTopicPercentage = Object.keys(actualPercentages).reduce((sum, subTopic) => {
-                        if (rows.some(row => row[2] === subTopic)) {
-                            return sum + (actualPercentages[subTopic] || 0);
-                        }
-                        return sum;
-                    }, 0);
+                    // SỬA Ở ĐÂY: Tính % của chủ đề chính dựa trên TỔNG ĐIỂM THỰC TẾ
+                    let mainTopicPoints = 0;
+                    rows.forEach(row => {
+                        const tnkq_count = (parseInt(row[3]||0) + parseInt(row[5]||0) + parseInt(row[7]||0) + parseInt(row[9]||0));
+                        const tl_count = (parseInt(row[4]||0) + parseInt(row[6]||0) + parseInt(row[8]||0) + parseInt(row[10]||0));
+                        mainTopicPoints += (tnkq_count * pointsTNKQ) + (tl_count * pointsTL);
+                    });
+                    const mainTopicPercentage = (mainTopicPoints / 10 * 100); // Chia cho 10 điểm
 
                     rows.forEach((row, rowIndex) => {
                         matrixBodyHtml += '<tr>';
                         matrixBodyHtml += `<td>${row[0]}</td>`;
                         if (rowIndex === 0) {
-                            matrixBodyHtml += `<td class="text-left" rowspan="${rowspan}">${row[1]}</td>`;
-                        }
+                            matrixBodyHtml += `<td rowspan="${rowspan}">${mainTopicPercentage.toFixed(0)}%</td>`;
+                        }
                         matrixBodyHtml += `<td class="text-left">${row[2]}</td>`;
 
                         for (let k = 3; k <= 10; k++) {
@@ -1609,10 +1610,11 @@ loadFileSystem();
                 const vdc_diem = totals.diem[9] + totals.diem[10];
 
                 const totalPoints = nb_diem + th_diem + vd_diem + vdc_diem;
-                const nb_percent = totalPoints > 0 ? (nb_diem / totalPoints * 100) : 0;
-                const th_percent = totalPoints > 0 ? (th_diem / totalPoints * 100) : 0;
-                const vd_percent = totalPoints > 0 ? (vd_diem / totalPoints * 100) : 0;
-                const vdc_percent = totalPoints > 0 ? (vdc_diem / totalPoints * 100) : 0;
+                              // SỬA Ở ĐÂY: Luôn chia cho 10 (thang điểm 100%)
+                const nb_percent = totalPoints > 0 ? (nb_diem / 10 * 100) : 0;
+                const th_percent = totalPoints > 0 ? (th_diem / 10 * 100) : 0;
+                const vd_percent = totalPoints > 0 ? (vd_diem / 10 * 100) : 0;
+                const vdc_percent = totalPoints > 0 ? (vdc_diem / 10 * 100) : 0;
                 const nb_th_percent = nb_percent + th_percent;
                 const vd_vdc_percent = vd_percent + vdc_percent;
 
@@ -1715,10 +1717,11 @@ loadFileSystem();
                     totalVDC_spec += parseInt((r[7] || '0-0').split('-')[1],10)||0;
                 });
                 const totalSpecPoints = (totalNB_spec + totalTH_spec) * pointsTNKQ + (totalVD_spec + totalVDC_spec) * pointsTL;
-                const spec_nb_percent = totalSpecPoints > 0 ? (((totalNB_spec*pointsTNKQ)/totalSpecPoints)*100) : 0;
-                const spec_th_percent = totalSpecPoints > 0 ? (((totalTH_spec*pointsTNKQ)/totalSpecPoints)*100) : 0;
-                const spec_vd_percent = totalSpecPoints > 0 ? (((totalVD_spec*pointsTL)/totalSpecPoints)*100) : 0;
-                const spec_vdc_percent = totalSpecPoints > 0 ? (((totalVDC_spec*pointsTL)/totalSpecPoints)*100) : 0;
+                // SỬA Ở ĐÂY: Luôn chia cho 10 (thang điểm 100%)
+                const spec_nb_percent = totalSpecPoints > 0 ? (((totalNB_spec*pointsTNKQ)/10)*100) : 0;
+                const spec_th_percent = totalSpecPoints > 0 ? (((totalTH_spec*pointsTNKQ)/10)*100) : 0;
+                const spec_vd_percent = totalSpecPoints > 0 ? (((totalVD_spec*pointsTL)/10)*100) : 0;
+                const spec_vdc_percent = totalSpecPoints > 0 ? (((totalVDC_spec*pointsTL)/10)*100) : 0;
                 const spec_nb_th_percent = spec_nb_percent + spec_th_percent;
                 const spec_vd_vdc_percent = spec_vd_percent + spec_vdc_percent;
 
