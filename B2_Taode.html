@@ -386,6 +386,15 @@
                         }
                     }
                 }
+                
+                // Sắp xếp câu hỏi theo mức độ, sau đó theo bài
+                const difficultyOrder = { 'NB': 1, 'TH': 2, 'VD': 3, 'VDC': 4 };
+                this.state.generatedTest.sort((a, b) => {
+                    const diff = difficultyOrder[a.mucDo] - difficultyOrder[b.mucDo];
+                    if (diff !== 0) return diff;
+                    return a.bai.localeCompare(b.bai); // Sắp xếp theo tên bài
+                });
+
                 this.state.view = 'review';
                 this.render();
             },
@@ -438,11 +447,35 @@
                     }).join('');
                 } else if (this.state.view === 'review') {
                     const pointsOptions = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
+                    
+                    let currentMucDo = '';
+                    let currentBai = '';
+                    let mucDoCounter = 0;
+                    let baiCounter = 0;
+                    let cauCounter = 0;
+                    
                     this.dom.reviewQuestionBank.innerHTML = this.state.generatedTest.map((q, index) => {
+                        
+                        if (q.mucDo !== currentMucDo) {
+                            currentMucDo = q.mucDo;
+                            mucDoCounter++;
+                            baiCounter = 0; // Reset bai counter
+                            currentBai = ''; // Reset bai
+                        }
+                        
+                        if (q.bai !== currentBai) {
+                            currentBai = q.bai;
+                            baiCounter++;
+                            cauCounter = 1; // Reset cau counter for new bai
+                        } else {
+                            cauCounter++;
+                        }
+
+                        const questionNumber = `${mucDoCounter}.${baiCounter}.${cauCounter}`;
                         const optionsHtml = pointsOptions.map(p => `<option value="${p}" ${p === q.points ? 'selected' : ''}>${p.toFixed(2)}</option>`).join('');
                         
                         return `<div class="review-question">
-                            <div class="content"><strong>Câu ${index + 1}:</strong> ${q.noiDung}</div>
+                            <div class="content"><strong>Câu ${questionNumber} (${q.mucDo}):</strong> ${q.noiDung}</div>
                             <div class="actions">
                                 <div class="point-selector">
                                     <select class="points-dropdown" data-id="${q.uniqueId}">${optionsHtml}</select>
@@ -608,7 +641,7 @@
             generateAnswerKeyHtml(questions, type, headerInfo) {
                 if (type === 'azota') {
                     let keyHtml = `<div style="font-family: Times New Roman, serif; font-size: 14pt; margin: 0 auto; max-width: 800px; page-break-before: always;"><h1 style="text-align: center;">ANSWER KEYS</h1></div>
-                                  <div style="font-family: Times New Roman, serif; font-size: 13pt; margin: 0 auto; max-width: 800px;">`;
+                                <div style="font-family: Times New Roman, serif; font-size: 13pt; margin: 0 auto; max-width: 800px;">`;
                     let answers = ``;
                     questions.forEach((q, index) => {
                         const num = index + 1;
@@ -637,7 +670,7 @@
                             <td style="text-align: center; width: 50%; vertical-align: top;">
                                 <p style="margin:0; text-transform: uppercase;">${headerInfo.donVi}</p>
                                 <table style="margin: 0 auto; border: none; border-collapse: collapse; text-align: center;">
-                                     <tr><td style="padding:0 5px; text-transform: uppercase; font-weight: bold; border-top: 1px solid black; margin-top: 2px;">${headerInfo.tenTruong}</td></tr>
+                                        <tr><td style="padding:0 5px; text-transform: uppercase; font-weight: bold; border-top: 1px solid black; margin-top: 2px;">${headerInfo.tenTruong}</td></tr>
                                 </table>
                             </td>
                             <td style="text-align: center; width: 50%; vertical-align: top;">
@@ -646,7 +679,7 @@
                                 <p style="margin:0; font-style: italic;">(Hướng dẫn chấm gồm có 01 trang)</p>
                             </td>
                         </tr>
-                         <tr>
+                        <tr>
                             <td style="text-align: center; padding-top: 10px;">
                                 <p style="margin:0; font-weight: bold;">ĐỀ CHÍNH THỨC</p>
                             </td>
@@ -677,7 +710,7 @@
                             if (num <= tracNghiemQuestions.length) {
                                 answerGrid += `<td style="border: 1px solid black; padding: 4px; font-weight: bold;">${num}</td>`;
                             } else {
-                                 answerGrid += `<td style="border: 1px solid black; padding: 4px; border-color: transparent;">&nbsp;</td>`;
+                                answerGrid += `<td style="border: 1px solid black; padding: 4px; border-color: transparent;">&nbsp;</td>`;
                             }
                         }
                         answerGrid += '</tr><tr>';
@@ -770,3 +803,5 @@
     </script>
 </body>
 </html>
+
+
