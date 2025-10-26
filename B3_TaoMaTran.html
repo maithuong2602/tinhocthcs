@@ -1577,8 +1577,11 @@ loadFileSystem();
                         matrixBodyHtml += '<tr>';
                         matrixBodyHtml += `<td>${row[0]}</td>`;
                         if (rowIndex === 0) {
-                            matrixBodyHtml += `<td rowspan="${rowspan}">${mainTopicPercentage.toFixed(0)}%</td>`;
+                            // VVVVV SỬA LẠI THÀNH DÒNG NÀY VVVVV
+                            matrixBodyHtml += `<td class="text-left" rowspan="${rowspan}">${row[1]}</td>`; 
                         }
+                        //matrixBodyHtml += `<td class="text-left">${row[2]}</td>`; // Cột Nội dung
+// ...
                         matrixBodyHtml += `<td class="text-left">${row[2]}</td>`;
 
                         for (let k = 3; k <= 10; k++) {
