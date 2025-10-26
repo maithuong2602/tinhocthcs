@@ -505,7 +505,7 @@
                         }
 
                         // Format: B1-NB-1.1
-                        const questionNumber = `B${bIndex}-${q.mucDo}-${tcIndex}.${cauHoiCounter}`;
+                        const questionNumber = `Câu ${index + 1}- B${bIndex}-${q.mucDo}-${tcIndex}.${cauHoiCounter}`;
                         const optionsHtml = pointsOptions.map(p => `<option value="${p}" ${p === q.points ? 'selected' : ''}>${p.toFixed(2)}</option>`).join('');
                         
                         return `<div class="review-question">
@@ -837,6 +837,7 @@
     </script>
 </body>
 </html>
+
 
 
 
